@@ -5,10 +5,6 @@
 """Date custom scalar type"""
 scalar Date
 
-type Mutation {
-  refreshToken(token: String!): Token!
-}
-
 type PaginatedUsers {
   edges: [UserEdge!]
   pageInfo: UserPageInfo
@@ -33,14 +29,6 @@ type Query {
     last: Int
     searchTerm: String
   ): PaginatedUsers!
-}
-
-type Token {
-  """JWT access token"""
-  accessToken: String!
-
-  """JWT refresh token"""
-  refreshToken: String!
 }
 
 type User {

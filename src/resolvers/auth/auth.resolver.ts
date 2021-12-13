@@ -11,17 +11,17 @@ import {
 import { AuthService } from '../../services/auth.service';
 import { RefreshTokenInput } from './dto/refresh-token.input';
 
-@Resolver(() => Auth)
-export class AuthResolver {
-  constructor(private readonly auth: AuthService) {}
+// @Resolver(() => Auth)
+// export class AuthResolver {
+//   constructor(private readonly auth: AuthService) {}
 
-  @Mutation(() => Token)
-  async refreshToken(@Args() { token }: RefreshTokenInput) {
-    return this.auth.refreshToken(token);
-  }
+//   @Mutation(() => Token)
+//   async refreshToken(@Args() { token }: RefreshTokenInput) {
+//     return this.auth.refreshToken(token);
+//   }
 
-  @ResolveField('user')
-  async user(@Parent() auth: Auth) {
-    return await this.auth.getUserFromToken(auth.accessToken);
-  }
-}
+//   @ResolveField('user')
+//   async user(@Parent() auth: Auth) {
+//     return await this.auth.getUserFromToken(auth.accessToken);
+//   }
+// }
