@@ -3,31 +3,229 @@
 //// ------------------------------------------------------
 
 Table User {
-  id String [pk]
+  id Int [pk, increment]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  email String [unique, not null]
-  password String [not null]
-  firstname String
-  lastname String
-  posts Post [not null]
+  userId String [unique, not null]
+  rcno Int [not null]
+  fullName String [not null]
+  notifications Notification [not null]
+  knowledgeBaseEntries KnowledgeBaseEntry [not null]
+  roles UserRole [not null]
+  userGroupUsers UserGroupUser [not null]
+  ticketsCreated Ticket [not null]
+  ticketAssignments TicketAssignment [not null]
+  ticketFollowings TicketFollowing [not null]
+  checklistCompletions ChecklistItem [not null]
+  ticketComments TicketComment [not null]
+  ticketAttachments TicketAttachment [not null]
+}
+
+Table Notification {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  userId Int [not null]
+  user User [not null]
+  body String
+  readAt DateTime
+}
+
+Table KnowledgeBase {
+  id Int [pk, increment]
+  mode String [not null]
+  name String [not null]
+  entries KnowledgeBaseEntry [not null]
+}
+
+Table KnowledgeBaseEntry {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  userId Int [not null]
+  user User [not null]
+  knowledgeBaseId Int [not null]
+  knowledgeBase KnowledgeBase [not null]
+  body String [not null]
+  current Boolean [not null]
+}
+
+Table Role {
+  id Int [pk, increment]
+  name String [not null]
+  userRoles UserRole [not null]
+}
+
+Table UserRole {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  userId Int [not null]
+  user User [not null]
+  roleId Int [not null]
   role Role [not null]
 }
 
-Table Post {
-  id String [pk]
+Table UserGroup {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  name String [not null]
+  createdById Int [not null]
+  userGroupUsers UserGroupUser [not null]
+}
+
+Table UserGroupUser {
+  id Int [pk, increment]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  published Boolean [not null]
+  userId Int [not null]
+  user User [not null]
+  userGroupId Int [not null]
+  userGroup UserGroup [not null]
+}
+
+Table Ticket {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  createdById Int [not null]
+  createdBy User [not null]
+  status TicketStatus [not null, default: 'Pending']
   title String [not null]
-  content String
-  author User
-  authorId String
+  body String
+  rating Int
+  feedback String
+  started Boolean [not null, default: false]
+  priorityId Int [not null]
+  priority Priority [not null]
+  categories TicketCategory [not null]
+  assignments TicketAssignment [not null]
+  checklistItems ChecklistItem [not null]
+  followings TicketFollowing [not null]
+  comments TicketComment [not null]
+  attachments TicketAttachment [not null]
 }
 
-Enum Role {
-  ADMIN
-  USER
+Table Priority {
+  id Int [pk, increment]
+  level Int [not null]
+  name String [not null]
+  tickets Ticket [not null]
 }
 
-Ref: Post.authorId > User.id
+Table Category {
+  id Int [pk, increment]
+  name String [not null]
+  tickets TicketCategory [not null]
+}
+
+Table TicketCategory {
+  id Int [pk, increment]
+  ticketId Int [not null]
+  ticket Ticket [not null]
+  categoryId Int [not null]
+  category Category [not null]
+}
+
+Table TicketAssignment {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  userId Int [not null]
+  user User [not null]
+  ticketId Int [not null]
+  ticket Ticket [not null]
+}
+
+Table ChecklistItem {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  ticketId Int [not null]
+  ticket Ticket [not null]
+  description String [not null]
+  completedById Int
+  completedBy User
+  completedAt DateTime
+}
+
+Table TicketFollowing {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  userId Int [not null]
+  user User [not null]
+  ticketId Int [not null]
+  ticket Ticket [not null]
+}
+
+Table TicketComment {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  userId Int [not null]
+  user User [not null]
+  ticketId Int [not null]
+  ticket Ticket [not null]
+  body String [not null]
+}
+
+Table TicketAttachment {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  userId Int [not null]
+  user User [not null]
+  ticketId Int [not null]
+  ticket Ticket [not null]
+  description String [not null]
+  url String [not null]
+}
+
+Enum TicketStatus {
+  Pending
+  Open
+  Closed
+  Solved
+  Reopened
+}
+
+Ref: Notification.userId > User.id
+
+Ref: KnowledgeBaseEntry.userId > User.id
+
+Ref: KnowledgeBaseEntry.knowledgeBaseId > KnowledgeBase.id
+
+Ref: UserRole.userId > User.id
+
+Ref: UserRole.roleId > Role.id
+
+Ref: UserGroupUser.userId > User.id
+
+Ref: UserGroupUser.userGroupId > UserGroup.id
+
+Ref: Ticket.createdById > User.id
+
+Ref: Ticket.priorityId > Priority.id
+
+Ref: TicketCategory.ticketId > Ticket.id
+
+Ref: TicketCategory.categoryId > Category.id
+
+Ref: TicketAssignment.userId > User.id
+
+Ref: TicketAssignment.ticketId > Ticket.id
+
+Ref: ChecklistItem.ticketId > Ticket.id
+
+Ref: ChecklistItem.completedById > User.id
+
+Ref: TicketFollowing.userId > User.id
+
+Ref: TicketFollowing.ticketId > Ticket.id
+
+Ref: TicketComment.userId > User.id
+
+Ref: TicketComment.ticketId > Ticket.id
+
+Ref: TicketAttachment.userId > User.id
+
+Ref: TicketAttachment.ticketId > Ticket.id

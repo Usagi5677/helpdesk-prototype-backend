@@ -13,29 +13,187 @@ generator dbml {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  email     String   @unique
-  password  String
-  firstname String?
-  lastname  String?
-  posts     Post[]
-  role      Role
+  id                   Int                  @id @default(autoincrement())
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  userId               String               @unique
+  rcno                 Int
+  fullName             String
+  notifications        Notification[]
+  knowledgeBaseEntries KnowledgeBaseEntry[]
+  roles                UserRole[]
+  userGroupUsers       UserGroupUser[]
+  ticketsCreated       Ticket[]
+  ticketAssignments    TicketAssignment[]
+  ticketFollowings     TicketFollowing[]
+  checklistCompletions ChecklistItem[]
+  ticketComments       TicketComment[]
+  ticketAttachments    TicketAttachment[]
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  published Boolean
-  title     String
-  content   String?
-  author    User?    @relation(fields: [authorId], references: [id])
-  authorId  String?
+model Notification {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  body      String?
+  readAt    DateTime?
 }
 
-enum Role {
-  ADMIN
-  USER
+model KnowledgeBase {
+  id      Int                  @id @default(autoincrement())
+  mode    String
+  name    String
+  entries KnowledgeBaseEntry[]
+}
+
+model KnowledgeBaseEntry {
+  id              Int           @id @default(autoincrement())
+  createdAt       DateTime      @default(now())
+  userId          Int
+  user            User          @relation(fields: [userId], references: [id])
+  knowledgeBaseId Int
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id])
+  body            String
+  current         Boolean
+}
+
+model Role {
+  id        Int        @id @default(autoincrement())
+  name      String
+  userRoles UserRole[]
+}
+
+model UserRole {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  roleId    Int
+  role      Role     @relation(fields: [roleId], references: [id])
+}
+
+model UserGroup {
+  id             Int             @id @default(autoincrement())
+  createdAt      DateTime        @default(now())
+  name           String
+  createdById    Int
+  userGroupUsers UserGroupUser[]
+}
+
+model UserGroupUser {
+  id          Int       @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  userGroupId Int
+  userGroup   UserGroup @relation(fields: [userGroupId], references: [id])
+}
+
+model Ticket {
+  id             Int                @id @default(autoincrement())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  createdById    Int
+  createdBy      User               @relation(fields: [createdById], references: [id])
+  status         TicketStatus       @default(Pending)
+  title          String
+  body           String?
+  rating         Int?
+  feedback       String?
+  started        Boolean            @default(false)
+  priorityId     Int
+  priority       Priority           @relation(fields: [priorityId], references: [id])
+  categories     TicketCategory[]
+  assignments    TicketAssignment[]
+  checklistItems ChecklistItem[]
+  followings     TicketFollowing[]
+  comments       TicketComment[]
+  attachments    TicketAttachment[]
+}
+
+enum TicketStatus {
+  Pending
+  Open
+  Closed
+  Solved
+  Reopened
+}
+
+model Priority {
+  id      Int      @id @default(autoincrement())
+  level   Int
+  name    String
+  tickets Ticket[]
+}
+
+model Category {
+  id      Int              @id @default(autoincrement())
+  name    String
+  tickets TicketCategory[]
+}
+
+model TicketCategory {
+  id         Int      @id @default(autoincrement())
+  ticketId   Int
+  ticket     Ticket   @relation(fields: [ticketId], references: [id])
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+}
+
+model TicketAssignment {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+}
+
+model ChecklistItem {
+  id            Int       @id @default(autoincrement())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  ticketId      Int
+  ticket        Ticket    @relation(fields: [ticketId], references: [id])
+  description   String
+  completedById Int?
+  completedBy   User?     @relation(fields: [completedById], references: [id])
+  completedAt   DateTime?
+}
+
+model TicketFollowing {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+}
+
+model TicketComment {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  body      String
+}
+
+model TicketAttachment {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  ticketId    Int
+  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+  description String
+  url         String
 }

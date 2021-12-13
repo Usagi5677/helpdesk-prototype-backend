@@ -1,27 +1,20 @@
-import { PrismaService } from 'nestjs-prisma';
-import { GqlAuthGuard } from '../../guards/gql-auth.guard';
-import {
-  Resolver,
-  Query,
-  Parent,
-  Mutation,
-  Args,
-  ResolveField,
-} from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { UserEntity } from '../../decorators/user.decorator';
+import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { User } from '../../models/user.model';
-import { ChangePasswordInput } from './dto/change-password.input';
-import { UserService } from 'src/services/user.service';
-import { UpdateUserInput } from './dto/update-user.input';
+import { PrismaService } from 'nestjs-prisma';
+import { UsersConnectionArgs } from '../../models/args/user-connection.args';
+import { PaginatedUsers } from '../../models/pagination/user-connection.model';
+import {
+  connectionFromArraySlice,
+  getPagingParameters,
+} from '../../common/pagination/connection-args';
 
 @Resolver(() => User)
 @UseGuards(GqlAuthGuard)
 export class UserResolver {
-  constructor(
-    private userService: UserService,
-    private prisma: PrismaService
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   @Query(() => User)
   async me(@UserEntity() user: User): Promise<User> {
@@ -29,29 +22,75 @@ export class UserResolver {
   }
 
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => User)
-  async updateUser(
-    @UserEntity() user: User,
-    @Args('data') newUserData: UpdateUserInput
-  ) {
-    return this.userService.updateUser(user.id, newUserData);
-  }
+  @Query(() => PaginatedUsers)
+  async users(@Args() args: UsersConnectionArgs): Promise<PaginatedUsers> {
+    const { limit, offset } = getPagingParameters(args);
 
-  @UseGuards(GqlAuthGuard)
-  @Mutation(() => User)
-  async changePassword(
-    @UserEntity() user: User,
-    @Args('data') changePassword: ChangePasswordInput
-  ) {
-    return this.userService.changePassword(
-      user.id,
-      user.password,
-      changePassword
+    const realOffset = offset || 0;
+    const realLimit = Math.min(50, limit || 50);
+    const realLimitPlusOne = realLimit + 1;
+
+    const where: any = { isDeleted: false, rcno: { gt: 0 } };
+
+    if (args.searchTerm) {
+      let rcno: number | null = null;
+      try {
+        rcno = parseInt(args.searchTerm);
+      } catch (error) {}
+
+      if (rcno) {
+        where['rcno'] = rcno;
+      } else {
+        where['fullName'] = { search: args.searchTerm };
+      }
+    }
+
+    const users = await this.prisma.user.findMany({
+      skip: offset,
+      take: realLimitPlusOne,
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const count = await this.prisma.user.count();
+
+    const { edges, pageInfo } = connectionFromArraySlice(
+      users.slice(0, realLimit),
+      args,
+      {
+        arrayLength: count,
+        sliceStart: realOffset,
+      }
     );
+
+    return {
+      edges,
+      pageInfo: {
+        ...pageInfo,
+        hasNextPage: realOffset + realLimit < count,
+        hasPreviousPage: realOffset >= realLimit,
+      },
+    };
   }
 
-  @ResolveField('posts')
-  posts(@Parent() author: User) {
-    return this.prisma.user.findUnique({ where: { id: author.id } }).posts();
+  @Query(() => [User])
+  async searchUser(@Args('query') query: string) {
+    const contains = query.trim();
+    const take = 10;
+
+    let rcno: number | null = null;
+    try {
+      // its an rcno
+      rcno = parseInt(contains);
+      return await this.prisma.user.findMany({ where: { rcno }, take });
+    } catch (error) {
+      // its a fullName
+      return await this.prisma.user.findMany({
+        where: {
+          fullName: { contains, mode: 'insensitive' },
+        },
+        take,
+      });
+    }
   }
 }

@@ -26,18 +26,20 @@ Starter template for 😻 [NestJS](https://nestjs.com/) and [Prisma](https://www
 ## Overview
 
 - [Instructions](#instructions)
+  - [Version](#version)
   - [Features](#features)
   - [Overview](#overview)
   - [Prisma Setup](#prisma-setup)
     - [1. Install Dependencies](#1-install-dependencies)
-    - [2. PostgreSQL with Docker](#2-PostgreSQL-with-docker)
-    - [3. Prisma: Prisma Migrate](#3-prisma-prisma-migrate)
-    - [4. Prisma: Prisma Client JS](#4-prisma-client-js)
+    - [2. PostgreSQL with Docker](#2-postgresql-with-docker)
+    - [3. Prisma Migrate](#3-prisma-migrate)
+    - [4. Prisma: Prisma Client JS](#4-prisma-prisma-client-js)
     - [5. Seed the database data with this script](#5-seed-the-database-data-with-this-script)
     - [6. Start NestJS Server](#6-start-nestjs-server)
   - [GraphQL Playground](#graphql-playground)
   - [Rest Api](#rest-api)
   - [Docker](#docker)
+    - [Docker Compose](#docker-compose)
   - [Schema Development](#schema-development)
   - [NestJS - Api Schema](#nestjs---api-schema)
     - [Resolver](#resolver)
@@ -148,7 +150,7 @@ Run Nest Server in Production mode:
 npm run start:prod
 ```
 
-GraphQL Playground for the NestJS Server is available here: http://localhost:3000/graphql
+GraphQL Playground for the NestJS Server is available here: http://localhost:4000/graphql
 
 **[⬆ back to top](#overview)**
 
@@ -164,7 +166,7 @@ Open up the [example GraphQL queries](graphql/auth.graphql) and copy them to the
 
 ## Rest Api
 
-[RESTful API](http://localhost:3000/api) documentation available with Swagger.
+[RESTful API](http://localhost:4000/api) documentation available with Swagger.
 
 ## Docker
 
@@ -184,10 +186,10 @@ docker build -t nest-prisma-server .
 After Docker build your docker image you are ready to start up a docker container running the nest server:
 
 ```bash
-docker run -d -t -p 3000:3000 --env-file .env nest-prisma-server
+docker run -d -t -p 4000:4000 --env-file .env nest-prisma-server
 ```
 
-Now open up [localhost:3000](http://localhost:3000) to verify that your nest server is running.
+Now open up [localhost:4000](http://localhost:4000) to verify that your nest server is running.
 
 When you run your NestJS application in a Docker container update your [.env](.env) file
 
@@ -292,7 +294,7 @@ You can also add the `GraphQLModule` in the `AppModule` to make `Apollo` availab
 You need to set the URL to the NestJS GraphQL Api. Open the file `src/app/graphql.module.ts` and update `uri`:
 
 ```ts
-const uri = 'http://localhost:3000/graphql';
+const uri = 'http://localhost:4000/graphql';
 ```
 
 To use Apollo-Angular you can inject `private apollo: Apollo` into the constructor of a page, component or service.
