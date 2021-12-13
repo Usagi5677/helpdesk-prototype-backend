@@ -11,8 +11,6 @@ type PaginatedUsers {
 }
 
 type Query {
-  hello(name: String!): String!
-  helloWorld: String!
   me: User!
   searchUser(query: String!): [User!]!
   users(
