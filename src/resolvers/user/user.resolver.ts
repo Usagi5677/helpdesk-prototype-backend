@@ -10,18 +10,20 @@ import {
   connectionFromArraySlice,
   getPagingParameters,
 } from '../../common/pagination/connection-args';
+import { Roles } from 'src/decorators/roles.decorator';
+import { RolesGuard } from 'src/guards/roles.guard';
 
 @Resolver(() => User)
-@UseGuards(GqlAuthGuard)
+@UseGuards(GqlAuthGuard, RolesGuard)
 export class UserResolver {
   constructor(private prisma: PrismaService) {}
 
+  @Roles('Admin')
   @Query(() => User)
   async me(@UserEntity() user: User): Promise<User> {
     return user;
   }
 
-  @UseGuards(GqlAuthGuard)
   @Query(() => PaginatedUsers)
   async users(@Args() args: UsersConnectionArgs): Promise<PaginatedUsers> {
     const { limit, offset } = getPagingParameters(args);

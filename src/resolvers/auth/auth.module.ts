@@ -7,6 +7,9 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { ConfigService } from '@nestjs/config';
 import { SecurityConfig } from 'src/configs/config.interface';
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { ProfileModule } from '../profile/profile.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { SecurityConfig } from 'src/configs/config.interface';
       },
       inject: [ConfigService],
     }),
+    PrismaModule,
+    ProfileModule,
+    UserModule,
   ],
   providers: [AuthService, JwtStrategy, GqlAuthGuard, PasswordService],
   exports: [GqlAuthGuard],

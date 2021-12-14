@@ -5,6 +5,5 @@ import { BaseModel } from './base.model';
 export class User extends BaseModel {
   rcno: number;
   fullName: string;
-  role: string;
-  type: string;
+  userId: string;
 }
