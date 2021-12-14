@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "Role" AS ENUM ('Agent', 'Admin');
+
+-- CreateEnum
 CREATE TYPE "TicketStatus" AS ENUM ('Pending', 'Open', 'Closed', 'Solved', 'Reopened');
 
 -- CreateTable
@@ -6,8 +9,9 @@ CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" TEXT NOT NULL,
     "rcno" INTEGER NOT NULL,
-    "full_name" TEXT NOT NULL,
+    "fullName" TEXT NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -45,20 +49,12 @@ CREATE TABLE "KnowledgeBaseEntry" (
 );
 
 -- CreateTable
-CREATE TABLE "Role" (
-    "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
-
-    CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "UserRole" (
     "id" SERIAL NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "userId" INTEGER NOT NULL,
-    "roleId" INTEGER NOT NULL,
+    "role" "Role" NOT NULL,
 
     CONSTRAINT "UserRole_pkey" PRIMARY KEY ("id")
 );
@@ -68,7 +64,7 @@ CREATE TABLE "UserGroup" (
     "id" SERIAL NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "name" TEXT NOT NULL,
-    "createdBy" INTEGER NOT NULL,
+    "createdById" INTEGER NOT NULL,
 
     CONSTRAINT "UserGroup_pkey" PRIMARY KEY ("id")
 );
@@ -90,13 +86,13 @@ CREATE TABLE "Ticket" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "createdById" INTEGER NOT NULL,
-    "userGroupId" INTEGER NOT NULL,
     "status" "TicketStatus" NOT NULL DEFAULT E'Pending',
+    "title" TEXT NOT NULL,
+    "body" TEXT,
     "rating" INTEGER,
     "feedback" TEXT,
     "started" BOOLEAN NOT NULL DEFAULT false,
     "priorityId" INTEGER NOT NULL,
-    "categoryId" INTEGER NOT NULL,
 
     CONSTRAINT "Ticket_pkey" PRIMARY KEY ("id")
 );
@@ -105,14 +101,24 @@ CREATE TABLE "Ticket" (
 CREATE TABLE "Priority" (
     "id" SERIAL NOT NULL,
     "level" INTEGER NOT NULL,
+    "name" TEXT NOT NULL,
 
     CONSTRAINT "Priority_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
+CREATE TABLE "Category" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "TicketCategory" (
     "id" SERIAL NOT NULL,
-    "level" INTEGER NOT NULL,
+    "ticketId" INTEGER NOT NULL,
+    "categoryId" INTEGER NOT NULL,
 
     CONSTRAINT "TicketCategory_pkey" PRIMARY KEY ("id")
 );
@@ -124,6 +130,7 @@ CREATE TABLE "TicketAssignment" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "userId" INTEGER NOT NULL,
     "ticketId" INTEGER NOT NULL,
+    "isOwner" BOOLEAN NOT NULL,
 
     CONSTRAINT "TicketAssignment_pkey" PRIMARY KEY ("id")
 );
@@ -134,6 +141,7 @@ CREATE TABLE "ChecklistItem" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "ticketId" INTEGER NOT NULL,
+    "description" TEXT NOT NULL,
     "completedById" INTEGER,
     "completedAt" TIMESTAMP(3),
 
@@ -176,6 +184,9 @@ CREATE TABLE "TicketAttachment" (
     CONSTRAINT "TicketAttachment_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateIndex
+CREATE UNIQUE INDEX "User_userId_key" ON "User"("userId");
+
 -- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -187,9 +198,6 @@ ALTER TABLE "KnowledgeBaseEntry" ADD CONSTRAINT "KnowledgeBaseEntry_knowledgeBas
 
 -- AddForeignKey
 ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserGroupUser" ADD CONSTRAINT "UserGroupUser_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -204,7 +212,10 @@ ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_createdById_fkey" FOREIGN KEY ("crea
 ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_priorityId_fkey" FOREIGN KEY ("priorityId") REFERENCES "Priority"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "TicketCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TicketCategory" ADD CONSTRAINT "TicketCategory_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "Ticket"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TicketCategory" ADD CONSTRAINT "TicketCategory_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TicketAssignment" ADD CONSTRAINT "TicketAssignment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

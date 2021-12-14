@@ -5,6 +5,10 @@
 """Date custom scalar type"""
 scalar Date
 
+type Mutation {
+  flushRedis: String!
+}
+
 type PaginatedUsers {
   edges: [UserEdge!]
   pageInfo: UserPageInfo
@@ -12,6 +16,8 @@ type PaginatedUsers {
 
 type Query {
   me: User!
+  redisGet(key: String!): String
+  redisKeys: [String!]!
   searchUser(query: String!): [User!]!
   users(
     """Paginate after opaque cursor"""
@@ -35,11 +41,10 @@ type User {
   fullName: String!
   id: ID!
   rcno: Int!
-  role: String!
-  type: String!
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
+  userId: String!
 }
 
 type UserEdge {

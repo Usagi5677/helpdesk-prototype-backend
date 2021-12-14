@@ -58,10 +58,9 @@ model KnowledgeBaseEntry {
   current         Boolean
 }
 
-model Role {
-  id        Int        @id @default(autoincrement())
-  name      String
-  userRoles UserRole[]
+enum Role {
+  Agent
+  Admin
 }
 
 model UserRole {
@@ -70,8 +69,7 @@ model UserRole {
   updatedAt DateTime @updatedAt
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
-  roleId    Int
-  role      Role     @relation(fields: [roleId], references: [id])
+  role      Role
 }
 
 model UserGroup {
@@ -151,6 +149,7 @@ model TicketAssignment {
   user      User     @relation(fields: [userId], references: [id])
   ticketId  Int
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  isOwner   Boolean
 }
 
 model ChecklistItem {
