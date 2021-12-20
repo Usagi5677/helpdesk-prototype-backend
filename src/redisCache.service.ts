@@ -13,6 +13,11 @@ export class RedisCacheService {
     await this.cache.set(key, value, { ttl });
   }
 
+  async setForMonth(key, value) {
+    const secondsInMonth = 30 * 24 * 60 * 60;
+    await this.set(key, value, secondsInMonth);
+  }
+
   async del(key) {
     await this.cache.del(key);
   }

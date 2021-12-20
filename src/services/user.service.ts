@@ -37,16 +37,13 @@ export class UserService {
         where: { userId: id },
       });
       roles = userRoles.map((r) => r.role);
-      const secondsInMonth = 30 * 24 * 60 * 60;
-      await this.redisCacheService.set(`roles-${id}`, roles, secondsInMonth);
+      await this.redisCacheService.setForMonth(`roles-${id}`, roles);
     }
     return roles;
   }
 
   async userHasRole(user: User, roles: Role[]): Promise<boolean> {
     const userRoles = await this.getUserRolesList(user.id);
-    console.log(roles);
-    console.log(userRoles);
     if (roles.some((r) => userRoles.includes(r))) return true;
     return false;
   }
@@ -218,10 +215,19 @@ export class UserService {
 
     // If search query is just a number, search user rcno only
     if (isRCNO) {
-      users = await this.prisma.user.findMany({
-        where: { rcno: parseInt(contains) },
-        take,
-      });
+      let findingUser = await this.redisCacheService.get(`rcno-${contains}`);
+      if (!findingUser) {
+        findingUser = await this.prisma.user.findFirst({
+          where: { rcno: parseInt(contains) },
+        });
+        if (findingUser) {
+          await this.redisCacheService.setForMonth(
+            `rcno-${contains}`,
+            findingUser
+          );
+        }
+      }
+      if (findingUser) users.push(findingUser);
     }
 
     // Otherwise search both users and user groups by name
