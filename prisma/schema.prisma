@@ -75,7 +75,9 @@ model UserRole {
 model UserGroup {
   id             Int             @id @default(autoincrement())
   createdAt      DateTime        @default(now())
-  name           String
+  updatedAt      DateTime        @updatedAt
+  name           String          @unique
+  mode           String          @default("Private")
   createdById    Int
   userGroupUsers UserGroupUser[]
 }
@@ -85,9 +87,11 @@ model UserGroupUser {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   userId      Int
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userGroupId Int
-  userGroup   UserGroup @relation(fields: [userGroupId], references: [id])
+  userGroup   UserGroup @relation(fields: [userGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, userGroupId])
 }
 
 model Ticket {
@@ -139,6 +143,7 @@ model TicketCategory {
   ticket     Ticket   @relation(fields: [ticketId], references: [id])
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id])
+  active     Boolean  @default(true)
 }
 
 model TicketAssignment {
@@ -183,6 +188,7 @@ model TicketComment {
   ticketId  Int
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
   body      String
+  mode      String   @default("Private")
 }
 
 model TicketAttachment {
@@ -195,4 +201,5 @@ model TicketAttachment {
   ticket      Ticket   @relation(fields: [ticketId], references: [id])
   description String
   url         String
+  mode        String   @default("Private")
 }

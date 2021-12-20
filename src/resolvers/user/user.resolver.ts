@@ -1,5 +1,11 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { ExecutionContext, UseGuards } from '@nestjs/common';
+import {
+  Args,
+  GqlExecutionContext,
+  Mutation,
+  Query,
+  Resolver,
+} from '@nestjs/graphql';
 import { UserEntity } from '../../decorators/user.decorator';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { User } from '../../models/user.model';
@@ -12,68 +18,71 @@ import {
 } from '../../common/pagination/connection-args';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
+import { UserService } from 'src/services/user.service';
 
 @Resolver(() => User)
 @UseGuards(GqlAuthGuard, RolesGuard)
 export class UserResolver {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private userService: UserService
+  ) {}
 
-  @Roles('Admin')
   @Query(() => User)
   async me(@UserEntity() user: User): Promise<User> {
     return user;
   }
 
-  @Query(() => PaginatedUsers)
-  async users(@Args() args: UsersConnectionArgs): Promise<PaginatedUsers> {
-    const { limit, offset } = getPagingParameters(args);
+  // @Query(() => PaginatedUsers)
+  // async users(@Args() args: UsersConnectionArgs): Promise<PaginatedUsers> {
+  //   const { limit, offset } = getPagingParameters(args);
 
-    const realOffset = offset || 0;
-    const realLimit = Math.min(50, limit || 50);
-    const realLimitPlusOne = realLimit + 1;
+  //   const realOffset = offset || 0;
+  //   const realLimit = Math.min(50, limit || 50);
+  //   const realLimitPlusOne = realLimit + 1;
 
-    const where: any = { isDeleted: false, rcno: { gt: 0 } };
+  //   const where: any = { isDeleted: false, rcno: { gt: 0 } };
 
-    if (args.searchTerm) {
-      let rcno: number | null = null;
-      try {
-        rcno = parseInt(args.searchTerm);
-      } catch (error) {}
+  //   if (args.searchTerm) {
+  //     let rcno: number | null = null;
+  //     try {
+  //       rcno = parseInt(args.searchTerm);
+  //     } catch (error) {}
 
-      if (rcno) {
-        where['rcno'] = rcno;
-      } else {
-        where['fullName'] = { search: args.searchTerm };
-      }
-    }
+  //     if (rcno) {
+  //       where['rcno'] = rcno;
+  //     } else {
+  //       where['fullName'] = { search: args.searchTerm };
+  //     }
+  //   }
 
-    const users = await this.prisma.user.findMany({
-      skip: offset,
-      take: realLimitPlusOne,
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+  //   const users = await this.prisma.user.findMany({
+  //     skip: offset,
+  //     take: realLimitPlusOne,
+  //     where,
+  //     orderBy: { createdAt: 'desc' },
+  //   });
 
-    const count = await this.prisma.user.count();
+  //   const count = await this.prisma.user.count();
 
-    const { edges, pageInfo } = connectionFromArraySlice(
-      users.slice(0, realLimit),
-      args,
-      {
-        arrayLength: count,
-        sliceStart: realOffset,
-      }
-    );
+  //   const { edges, pageInfo } = connectionFromArraySlice(
+  //     users.slice(0, realLimit),
+  //     args,
+  //     {
+  //       arrayLength: count,
+  //       sliceStart: realOffset,
+  //     }
+  //   );
 
-    return {
-      edges,
-      pageInfo: {
-        ...pageInfo,
-        hasNextPage: realOffset + realLimit < count,
-        hasPreviousPage: realOffset >= realLimit,
-      },
-    };
-  }
+  //   return {
+  //     edges,
+  //     pageInfo: {
+  //       ...pageInfo,
+  //       hasNextPage: realOffset + realLimit < count,
+  //       hasPreviousPage: realOffset >= realLimit,
+  //     },
+  //   };
+  // }
 
   @Query(() => [User])
   async searchUser(@Args('query') query: string) {

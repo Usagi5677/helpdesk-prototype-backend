@@ -1,4 +1,4 @@
-import { ObjectType, registerEnumType, HideField } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
 import { BaseModel } from './base.model';
 
 @ObjectType()

@@ -6,12 +6,18 @@
 scalar Date
 
 type Mutation {
+  addToUserGroup(userGroupId: Int!, userId: Int!): String!
+  changeUserGroupMode(id: Int!, mode: String!): String!
+  changeUserGroupName(id: Int!, name: String!): String!
+  createUserGroup(mode: String!, name: String!): String!
+  deleteUserGroup(id: Int!): String!
   flushRedis: String!
+  removeFromUserGroup(id: Int!): String!
 }
 
-type PaginatedUsers {
-  edges: [UserEdge!]
-  pageInfo: UserPageInfo
+type PaginatedUserGroup {
+  edges: [UserGroupEdge!]
+  pageInfo: UserGroupPageInfo
 }
 
 type Query {
@@ -19,7 +25,8 @@ type Query {
   redisGet(key: String!): String
   redisKeys: [String!]!
   searchUser(query: String!): [User!]!
-  users(
+  userGroup(id: Int!): UserGroup!
+  userGroups(
     """Paginate after opaque cursor"""
     after: String
 
@@ -31,15 +38,15 @@ type Query {
 
     """Paginate last"""
     last: Int
-    searchTerm: String
-  ): PaginatedUsers!
+    name: Int
+  ): PaginatedUserGroup!
 }
 
 type User {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
   fullName: String!
-  id: ID!
+  id: Int!
   rcno: Int!
 
   """Identifies the date and time when the object was last updated."""
@@ -47,12 +54,24 @@ type User {
   userId: String!
 }
 
-type UserEdge {
-  cursor: String
-  node: User
+type UserGroup {
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  createdBy: User!
+  id: Int!
+  name: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+  users: [User!]!
 }
 
-type UserPageInfo {
+type UserGroupEdge {
+  cursor: String
+  node: UserGroup
+}
+
+type UserGroupPageInfo {
   count: Int!
   endCursor: String
   hasNextPage: Boolean!

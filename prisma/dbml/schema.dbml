@@ -60,7 +60,9 @@ Table UserRole {
 Table UserGroup {
   id Int [pk, increment]
   createdAt DateTime [default: `now()`, not null]
-  name String [not null]
+  updatedAt DateTime [not null]
+  name String [unique, not null]
+  mode String [not null, default: 'Private']
   createdById Int [not null]
   userGroupUsers UserGroupUser [not null]
 }
@@ -73,6 +75,10 @@ Table UserGroupUser {
   user User [not null]
   userGroupId Int [not null]
   userGroup UserGroup [not null]
+
+  indexes {
+    (userId, userGroupId) [unique]
+  }
 }
 
 Table Ticket {
@@ -116,6 +122,7 @@ Table TicketCategory {
   ticket Ticket [not null]
   categoryId Int [not null]
   category Category [not null]
+  active Boolean [not null, default: true]
 }
 
 Table TicketAssignment {
@@ -160,6 +167,7 @@ Table TicketComment {
   ticketId Int [not null]
   ticket Ticket [not null]
   body String [not null]
+  mode String [not null, default: 'Private']
 }
 
 Table TicketAttachment {
@@ -172,6 +180,7 @@ Table TicketAttachment {
   ticket Ticket [not null]
   description String [not null]
   url String [not null]
+  mode String [not null, default: 'Private']
 }
 
 Enum Role {
