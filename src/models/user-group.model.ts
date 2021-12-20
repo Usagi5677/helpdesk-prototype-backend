@@ -5,6 +5,7 @@ import { User } from './user.model';
 @ObjectType()
 export class UserGroup extends BaseModel {
   name: string;
-  createdBy: User;
-  users: User[];
+  mode: string;
+  createdBy?: User;
+  users?: User[];
 }

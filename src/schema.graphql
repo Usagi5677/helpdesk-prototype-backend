@@ -25,6 +25,7 @@ type Query {
   redisGet(key: String!): String
   redisKeys: [String!]!
   searchUser(query: String!): [User!]!
+  searchUsersAndGroups(query: String!): [SearchResult!]!
   userGroup(id: Int!): UserGroup!
   userGroups(
     """Paginate after opaque cursor"""
@@ -42,6 +43,13 @@ type Query {
   ): PaginatedUserGroup!
 }
 
+type SearchResult {
+  name: String!
+  type: String!
+  user: User
+  userGroup: UserGroup
+}
+
 type User {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
@@ -57,13 +65,14 @@ type User {
 type UserGroup {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
-  createdBy: User!
+  createdBy: User
   id: Int!
+  mode: String!
   name: String!
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
-  users: [User!]!
+  users: [User!]
 }
 
 type UserGroupEdge {
