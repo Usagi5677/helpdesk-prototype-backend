@@ -239,6 +239,7 @@ export class UserService {
       const visibleRoles: Role[] = ['Admin', 'Agent'];
       const canSeePrivateGroups = await this.userHasRole(user, visibleRoles);
       if (!canSeePrivateGroups) {
+        // Otherwise show only public groups
         where.AND.push({
           mode: 'Public',
         });
@@ -247,6 +248,8 @@ export class UserService {
         where,
         take: Math.floor(take / 2),
       });
+
+      // Map each user group to search results
       userGroups.forEach((group) => {
         const searchResult = new SearchResult();
         searchResult.name = group.name;
@@ -255,6 +258,8 @@ export class UserService {
         searchResults.push(searchResult);
       });
 
+      // If there are less results for user groups than half of the take limit,
+      // remaining amount is added to take limit for user result
       if (userGroups.length <= Math.floor(take / 2)) {
         take -= userGroups.length;
       } else {
@@ -265,6 +270,8 @@ export class UserService {
         take: take,
       });
     }
+
+    // Map each user to search results
     users.forEach((user) => {
       const searchResult = new SearchResult();
       searchResult.name = user.fullName;
