@@ -207,7 +207,7 @@ export class UserService {
     user: User,
     query: string
   ): Promise<SearchResult[]> {
-    let take = 3;
+    let take = 10;
     const contains = query.trim();
     const isRCNO = /^-?\d+$/.test(contains);
     let searchResults: SearchResult[] = [];
@@ -232,10 +232,10 @@ export class UserService {
 
     // Otherwise search both users and user groups by name
     else {
-      // Only these roles can see all user groups
       const where: any = {
         AND: [{ name: { contains, mode: 'insensitive' } }],
       };
+      // Only these roles can see all user groups
       const visibleRoles: Role[] = ['Admin', 'Agent'];
       const canSeePrivateGroups = await this.userHasRole(user, visibleRoles);
       if (!canSeePrivateGroups) {
@@ -245,7 +245,7 @@ export class UserService {
       }
       const userGroups = await this.prisma.userGroup.findMany({
         where,
-        take: Math.ceil(take / 2),
+        take: Math.floor(take / 2),
       });
       userGroups.forEach((group) => {
         const searchResult = new SearchResult();
@@ -255,7 +255,11 @@ export class UserService {
         searchResults.push(searchResult);
       });
 
-      if (userGroups.length < take / 2) take = take - userGroups.length;
+      if (userGroups.length <= Math.floor(take / 2)) {
+        take -= userGroups.length;
+      } else {
+        take = Math.floor(take / 2);
+      }
       users = await this.prisma.user.findMany({
         where: { fullName: { contains, mode: 'insensitive' } },
         take: take,
