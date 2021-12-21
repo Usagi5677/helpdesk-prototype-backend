@@ -10,6 +10,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import config from './configs/config';
 import { GraphqlConfig } from './configs/config.interface';
 import { PrismaModule } from 'nestjs-prisma';
+import { TicketModule } from './resolvers/ticket/ticket.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { PrismaModule } from 'nestjs-prisma';
     }),
     AuthModule,
     UserModule,
+    TicketModule,
   ],
   controllers: [AppController],
   providers: [AppService, AppResolver, DateScalar],

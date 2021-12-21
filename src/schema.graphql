@@ -2,17 +2,48 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type Category {
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  id: Int!
+  name: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+}
+
+type CategoryEdge {
+  cursor: String
+  node: Category
+}
+
+type CategoryPageInfo {
+  count: Int!
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
 """Date custom scalar type"""
 scalar Date
 
 type Mutation {
   addToUserGroup(userGroupId: Int!, userId: Int!): String!
+  changeCategoryName(id: Int!, name: String!): String!
   changeUserGroupMode(id: Int!, mode: String!): String!
   changeUserGroupName(id: Int!, name: String!): String!
+  createCategory(name: String!): String!
   createUserGroup(mode: String!, name: String!): String!
+  deleteCategory(id: Int!): String!
   deleteUserGroup(id: Int!): String!
   flushRedis: String!
   removeFromUserGroup(id: Int!): String!
+}
+
+type PaginatedCategory {
+  edges: [CategoryEdge!]
+  pageInfo: CategoryPageInfo
 }
 
 type PaginatedUserGroup {
@@ -21,9 +52,24 @@ type PaginatedUserGroup {
 }
 
 type Query {
+  categories(
+    """Paginate after opaque cursor"""
+    after: String
+
+    """Paginate before opaque cursor"""
+    before: String
+
+    """Paginate first"""
+    first: Int
+
+    """Paginate last"""
+    last: Int
+    name: String
+  ): PaginatedCategory!
   me: User!
   redisGet(key: String!): String
   redisKeys: [String!]!
+  searchCategory(name: String!): [Category!]!
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(query: String!): [SearchResult!]!
   userGroup(id: Int!): UserGroup!
@@ -39,7 +85,7 @@ type Query {
 
     """Paginate last"""
     last: Int
-    name: Int
+    name: String
   ): PaginatedUserGroup!
 }
 

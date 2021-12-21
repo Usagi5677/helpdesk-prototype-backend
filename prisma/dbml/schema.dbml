@@ -112,17 +112,21 @@ Table Priority {
 
 Table Category {
   id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
   name String [not null]
+  active Boolean [not null, default: true]
   tickets TicketCategory [not null]
 }
 
 Table TicketCategory {
   id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
   ticketId Int [not null]
   ticket Ticket [not null]
   categoryId Int [not null]
   category Category [not null]
-  active Boolean [not null, default: true]
 }
 
 Table TicketAssignment {
