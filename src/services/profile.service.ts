@@ -1,7 +1,7 @@
 import { RedisCacheService } from 'src/redisCache.service';
 import { Profile } from 'src/models/profile.model';
 import axios from 'axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 @Injectable()
 export class ProfileService {
@@ -59,7 +59,10 @@ export class ProfileService {
             profile.unit = respEmp.unit;
           }
         })
-        .catch((error) => console.log(error));
+        .catch((error) => {
+          console.log(error);
+          throw new InternalServerErrorException();
+        });
       const secondsInWeek = 7 * 24 * 60 * 60;
       await this.redisCacheService.set(`uuid-${uuid}`, profile, secondsInWeek);
     }

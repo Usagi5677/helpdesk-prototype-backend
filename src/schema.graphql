@@ -29,16 +29,21 @@ type CategoryPageInfo {
 scalar Date
 
 type Mutation {
+  addFollower(id: Int!, newFollowerId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: Int!): String!
   changeCategoryName(id: Int!, name: String!): String!
   changeUserGroupMode(id: Int!, mode: String!): String!
   changeUserGroupName(id: Int!, name: String!): String!
   createCategory(name: String!): String!
+  createTicket(body: String!, title: String!): String!
   createUserGroup(mode: String!, name: String!): String!
   deleteCategory(id: Int!): String!
   deleteUserGroup(id: Int!): String!
   flushRedis: String!
+  giveFeedback(feedback: String!, id: Int!, rating: Int!): String!
   removeFromUserGroup(id: Int!): String!
+  setTicketPriority(id: Int!, priority: String!): String!
+  setTicketStatus(id: Int!, status: String!): String!
 }
 
 type PaginatedCategory {

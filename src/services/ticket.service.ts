@@ -3,8 +3,9 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
 import ConnectionArgs, {
   connectionFromArraySlice,
@@ -13,10 +14,15 @@ import ConnectionArgs, {
 import { PaginatedCategory } from 'src/models/pagination/category-connection.model';
 import { CategoryConnectionArgs } from 'src/models/args/category-connection.args';
 import { Category } from 'src/models/category.model';
+import { Priority } from 'src/common/enums/priority';
+import { Status } from 'src/common/enums/status';
+import { UserService } from './user.service';
+import { Ticket } from 'src/models/ticket.model';
 @Injectable()
 export class TicketService {
   constructor(
     private prisma: PrismaService,
+    private userService: UserService,
     private readonly redisCacheService: RedisCacheService
   ) {}
 
@@ -105,5 +111,96 @@ export class TicketService {
       take,
       orderBy: { name: 'asc' },
     });
+  }
+
+  //** Create ticket */
+  async createTicket(user: User, title: string, body: string) {
+    try {
+      await this.prisma.ticket.create({
+        data: {
+          createdById: user.id,
+          title,
+          body,
+          followings: { create: [{ userId: user.id }] },
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Set ticket priority */
+  async setTicketPriority(id: number, priority: Priority) {
+    try {
+      await this.prisma.ticket.update({
+        where: { id },
+        data: { priority },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Set ticket status */
+  async setTicketStatus(id: number, status: Status) {
+    try {
+      await this.prisma.ticket.update({
+        where: { id },
+        data: { status },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Give feedback for ticket */
+  async setTicketFeedback(
+    user: User,
+    id: number,
+    rating: number,
+    feedback: string
+  ) {
+    if (rating < 1 || rating > 5) {
+      throw new BadRequestException('Rating should be between 1 and 5.');
+    }
+    const ticket = await this.prisma.ticket.findFirst({ where: { id } });
+    if (ticket.createdById !== user.id) {
+      throw new UnauthorizedException(
+        'Feedback can only be given by the creator of the ticket.'
+      );
+    }
+    try {
+      await this.prisma.ticket.update({
+        where: { id },
+        data: { rating, feedback },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Add follower to ticket */
+  async addFollower(user: User, ticketId: number, newFollowerId: number) {
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user);
+    if (!isAdminOrAgent) {
+      const ticket = await this.prisma.ticket.findFirst({
+        where: { id: ticketId },
+      });
+      if (ticket.createdById !== user.id) {
+        throw new UnauthorizedException('Not authorized to add followers.');
+      }
+    }
+    try {
+      await this.prisma.ticketFollowing.create({
+        data: { ticketId, userId: newFollowerId },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
   }
 }

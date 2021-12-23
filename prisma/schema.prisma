@@ -105,9 +105,7 @@ model Ticket {
   body           String?
   rating         Int?
   feedback       String?
-  started        Boolean            @default(false)
-  priorityId     Int
-  priority       Priority           @relation(fields: [priorityId], references: [id])
+  priority       Priority?
   categories     TicketCategory[]
   assignments    TicketAssignment[]
   checklistItems ChecklistItem[]
@@ -124,11 +122,10 @@ enum TicketStatus {
   Reopened
 }
 
-model Priority {
-  id      Int      @id @default(autoincrement())
-  level   Int
-  name    String
-  tickets Ticket[]
+enum Priority {
+  High
+  Normal
+  Low
 }
 
 model Category {
@@ -181,6 +178,8 @@ model TicketFollowing {
   user      User     @relation(fields: [userId], references: [id])
   ticketId  Int
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
+
+  @@unique([userId, ticketId])
 }
 
 model TicketComment {

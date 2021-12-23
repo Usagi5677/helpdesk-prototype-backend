@@ -92,22 +92,13 @@ Table Ticket {
   body String
   rating Int
   feedback String
-  started Boolean [not null, default: false]
-  priorityId Int [not null]
-  priority Priority [not null]
+  priority Priority
   categories TicketCategory [not null]
   assignments TicketAssignment [not null]
   checklistItems ChecklistItem [not null]
   followings TicketFollowing [not null]
   comments TicketComment [not null]
   attachments TicketAttachment [not null]
-}
-
-Table Priority {
-  id Int [pk, increment]
-  level Int [not null]
-  name String [not null]
-  tickets Ticket [not null]
 }
 
 Table Category {
@@ -160,6 +151,10 @@ Table TicketFollowing {
   user User [not null]
   ticketId Int [not null]
   ticket Ticket [not null]
+
+  indexes {
+    (userId, ticketId) [unique]
+  }
 }
 
 Table TicketComment {
@@ -200,6 +195,12 @@ Enum TicketStatus {
   Reopened
 }
 
+Enum Priority {
+  High
+  Normal
+  Low
+}
+
 Ref: Notification.userId > User.id
 
 Ref: KnowledgeBaseEntry.userId > User.id
@@ -213,8 +214,6 @@ Ref: UserGroupUser.userId > User.id
 Ref: UserGroupUser.userGroupId > UserGroup.id
 
 Ref: Ticket.createdById > User.id
-
-Ref: Ticket.priorityId > Priority.id
 
 Ref: TicketCategory.ticketId > Ticket.id
 
