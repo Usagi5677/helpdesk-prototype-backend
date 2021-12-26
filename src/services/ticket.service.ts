@@ -113,7 +113,7 @@ export class TicketService {
     });
   }
 
-  //** Create ticket */
+  //** Create ticket. */
   async createTicket(user: User, title: string, body: string) {
     try {
       await this.prisma.ticket.create({
@@ -130,7 +130,7 @@ export class TicketService {
     }
   }
 
-  //** Set ticket priority */
+  //** Set ticket priority. */
   async setTicketPriority(id: number, priority: Priority) {
     try {
       await this.prisma.ticket.update({
@@ -143,7 +143,7 @@ export class TicketService {
     }
   }
 
-  //** Set ticket status */
+  //** Set ticket status. */
   async setTicketStatus(id: number, status: Status) {
     try {
       await this.prisma.ticket.update({
@@ -156,7 +156,7 @@ export class TicketService {
     }
   }
 
-  //** Give feedback for ticket */
+  //** Give feedback for ticket. */
   async setTicketFeedback(
     user: User,
     id: number,
@@ -183,7 +183,7 @@ export class TicketService {
     }
   }
 
-  //** Add follower to ticket */
+  //** Add follower to ticket. */
   async addFollower(user: User, ticketId: number, newFollowerId: number) {
     const isAdminOrAgent = await this.userService.isAdminOrAgent(user);
     if (!isAdminOrAgent) {
@@ -197,6 +197,45 @@ export class TicketService {
     try {
       await this.prisma.ticketFollowing.create({
         data: { ticketId, userId: newFollowerId },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException(
+          `User is already a follower of this ticket.`
+        );
+      } else {
+        console.log(e);
+        throw new InternalServerErrorException('Unexpected error occured.');
+      }
+    }
+  }
+
+  //** Remove follower from ticket. */
+  async removeFollower(
+    user: User,
+    ticketId: number,
+    deletingFollowerId: number
+  ) {
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    if (!isAdminOrAgent) {
+      if (ticket.createdById !== user.id) {
+        throw new UnauthorizedException('Not authorized to remove followers.');
+      }
+    }
+    if (user.id === deletingFollowerId) {
+      throw new BadRequestException(
+        `Ticket creator cannot be removed as a follower.`
+      );
+    }
+    try {
+      await this.prisma.ticketFollowing.deleteMany({
+        where: { ticketId, userId: deletingFollowerId },
       });
     } catch (e) {
       console.log(e);

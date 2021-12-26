@@ -65,4 +65,14 @@ export class TicketResolver {
     await this.ticketService.addFollower(user, id, newFollowerId);
     return `Successfully added follower to ticket.`;
   }
+
+  @Mutation(() => String)
+  async removeFollower(
+    @UserEntity() user: User,
+    @Args('id') id: number,
+    @Args('deletingFollowerId') deletingFollowerId: number
+  ): Promise<String> {
+    await this.ticketService.removeFollower(user, id, deletingFollowerId);
+    return `Successfully removed follower from ticket.`;
+  }
 }
