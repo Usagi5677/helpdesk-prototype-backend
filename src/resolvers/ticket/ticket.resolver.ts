@@ -48,31 +48,112 @@ export class TicketResolver {
   @Mutation(() => String)
   async giveFeedback(
     @UserEntity() user: User,
-    @Args('id') id: number,
+    @Args('ticketId') ticketId: number,
     @Args('rating') rating: number,
     @Args('feedback') feedback: string
   ): Promise<String> {
-    await this.ticketService.setTicketFeedback(user, id, rating, feedback);
+    await this.ticketService.setTicketFeedback(
+      user,
+      ticketId,
+      rating,
+      feedback
+    );
     return `Successfully given ticket feedback.`;
   }
 
   @Mutation(() => String)
   async addFollower(
     @UserEntity() user: User,
-    @Args('id') id: number,
+    @Args('ticketId') ticketId: number,
     @Args('newFollowerId') newFollowerId: number
   ): Promise<String> {
-    await this.ticketService.addFollower(user, id, newFollowerId);
+    await this.ticketService.addFollower(user, ticketId, newFollowerId);
     return `Successfully added follower to ticket.`;
   }
 
   @Mutation(() => String)
   async removeFollower(
     @UserEntity() user: User,
-    @Args('id') id: number,
+    @Args('ticketId') ticketId: number,
     @Args('deletingFollowerId') deletingFollowerId: number
   ): Promise<String> {
-    await this.ticketService.removeFollower(user, id, deletingFollowerId);
+    await this.ticketService.removeFollower(user, ticketId, deletingFollowerId);
     return `Successfully removed follower from ticket.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async assignAgent(
+    @UserEntity() user: User,
+    @Args('ticketId') ticketId: number,
+    @Args('agentId') agentId: number
+  ): Promise<String> {
+    await this.ticketService.assignAgent(user, ticketId, agentId);
+    return `Successfully assigned agent to ticket.`;
+  }
+
+  @Roles('Admin')
+  @Mutation(() => String)
+  async setOwner(
+    @Args('ticketId') ticketId: number,
+    @Args('agentId') agentId: number
+  ): Promise<String> {
+    await this.ticketService.setOwner(ticketId, agentId);
+    return `Successfully set new owner of ticket.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async unassignAgent(
+    @UserEntity() user: User,
+    @Args('ticketId') ticketId: number,
+    @Args('agentId') agentId: number
+  ): Promise<String> {
+    await this.ticketService.unassignAgent(user, ticketId, agentId);
+    return `Successfully unassigned agent to ticket.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async addChecklistItem(
+    @Args('ticketId') ticketId: number,
+    @Args('description') description: string
+  ): Promise<String> {
+    await this.ticketService.createChecklistItem(ticketId, description);
+    return `Added checklist item to ticket.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async editChecklistItem(
+    @Args('id') id: number,
+    @Args('description') description: string
+  ): Promise<String> {
+    await this.ticketService.editChecklistItem(id, description);
+    return `Checklist item updated.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async completeChecklistItem(
+    @UserEntity() user: User,
+    @Args('id') id: number
+  ): Promise<String> {
+    await this.ticketService.completeChecklistItem(user, id);
+    return `Checklist item marked as complete.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async uncompleteChecklistItem(@Args('id') id: number): Promise<String> {
+    await this.ticketService.uncompleteChecklistItem(id);
+    return `Checklist item marked as not complete.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async deleteChecklistItem(@Args('id') id: number): Promise<String> {
+    await this.ticketService.deleteChecklistItem(id);
+    return `Checklist item deleted.`;
   }
 }

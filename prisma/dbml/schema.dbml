@@ -129,6 +129,10 @@ Table TicketAssignment {
   ticketId Int [not null]
   ticket Ticket [not null]
   isOwner Boolean [not null]
+
+  indexes {
+    (userId, ticketId) [unique]
+  }
 }
 
 Table ChecklistItem {

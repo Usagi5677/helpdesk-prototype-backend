@@ -185,7 +185,7 @@ export class TicketService {
 
   //** Add follower to ticket. */
   async addFollower(user: User, ticketId: number, newFollowerId: number) {
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user);
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     if (!isAdminOrAgent) {
       const ticket = await this.prisma.ticket.findFirst({
         where: { id: ticketId },
@@ -219,7 +219,7 @@ export class TicketService {
     ticketId: number,
     deletingFollowerId: number
   ) {
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user);
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
     });
@@ -236,6 +236,184 @@ export class TicketService {
     try {
       await this.prisma.ticketFollowing.deleteMany({
         where: { ticketId, userId: deletingFollowerId },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Assign agent to ticket. */
+  async assignAgent(user: User, ticketId: number, agentId: number) {
+    const isAdmin = await this.userService.isAdmin(user.id);
+    // Agents can only assign themselves to ticket.
+    if (!isAdmin) {
+      if (user.id !== agentId) {
+        throw new UnauthorizedException(
+          'Agents cannot assign other agents to ticket.'
+        );
+      }
+    }
+    // Check if the user being assigned is an agent.
+    const isAgent = await this.userService.isAgent(agentId);
+    if (!isAgent) {
+      throw new BadRequestException(`User is not an agent.`);
+    }
+    // Check current assignments to ticket to see if owner exists. If not, this
+    // agent will be assigned as owner.
+    const ticketAssignments = await this.prisma.ticketAssignment.findMany({
+      where: { ticketId },
+    });
+    const ownerExists = ticketAssignments.some((ta) => ta.isOwner);
+    try {
+      await this.prisma.ticketAssignment.create({
+        data: { ticketId, userId: agentId, isOwner: !ownerExists },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException(
+          `Agent is already assigned to this ticket.`
+        );
+      } else {
+        console.log(e);
+        throw new InternalServerErrorException('Unexpected error occured.');
+      }
+    }
+  }
+
+  //** Set ticket owner agent. */
+  async setOwner(ticketId: number, agentId: number) {
+    const ticketAssignments = await this.prisma.ticketAssignment.findMany({
+      where: { ticketId },
+    });
+    // Check if agent is assigned to ticket.
+    const agent = ticketAssignments.find((ta) => ta.userId === agentId);
+    if (!agent) {
+      throw new BadRequestException(`Agent is not assigned to this ticket.`);
+    }
+    let transactions = [
+      this.prisma.ticketAssignment.update({
+        where: { id: agent.id },
+        data: { isOwner: true },
+      }),
+    ];
+    // Check for current owner of ticket.
+    const currentOwner = ticketAssignments.find((ta) => ta.isOwner);
+    if (currentOwner.userId === agentId) {
+      throw new BadRequestException(
+        `Agent is already the owner of this ticket.`
+      );
+    }
+    if (currentOwner) {
+      transactions.push(
+        this.prisma.ticketAssignment.update({
+          where: { id: currentOwner.id },
+          data: { isOwner: false },
+        })
+      );
+    }
+    try {
+      await this.prisma.$transaction(transactions);
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Remove agent from ticket. */
+  async unassignAgent(user: User, ticketId: number, agentId: number) {
+    const isAdmin = await this.userService.isAdmin(user.id);
+    // Agents can only remove themselves from ticket.
+    if (!isAdmin) {
+      if (user.id !== agentId) {
+        throw new UnauthorizedException(
+          'Agents cannot unassign other agents from ticket.'
+        );
+      }
+    }
+    const ticketAssignments = await this.prisma.ticketAssignment.findMany({
+      where: { ticketId },
+    });
+    const agent = ticketAssignments.find((ta) => ta.userId === agentId);
+    if (!agent) {
+      throw new BadRequestException(`Agent is not assigned to this ticket.`);
+    }
+    // Check if agent being unassigned is the current owner of ticket.
+    const currentOwner = ticketAssignments.find((ta) => ta.isOwner);
+    if (currentOwner.userId === agentId) {
+      throw new BadRequestException(
+        `Ticket owner cannot be unassigned from ticket. Ticket owner must be changed before unassigning this agent from the ticket.`
+      );
+    }
+    try {
+      await this.prisma.ticketAssignment.deleteMany({
+        where: { ticketId, userId: agentId },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Create checklist item. */
+  async createChecklistItem(ticketId: number, description: string) {
+    try {
+      await this.prisma.checklistItem.create({
+        data: { ticketId, description },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Edit checklist item. */
+  async editChecklistItem(id: number, description: string) {
+    try {
+      await this.prisma.checklistItem.update({
+        where: { id },
+        data: { description },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Complete checklist item. */
+  async completeChecklistItem(user: User, id: number) {
+    try {
+      await this.prisma.checklistItem.update({
+        where: { id },
+        data: { completedById: user.id, completedAt: new Date() },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Uncomplete checklist item. */
+  async uncompleteChecklistItem(id: number) {
+    try {
+      await this.prisma.checklistItem.update({
+        where: { id },
+        data: { completedById: null, completedAt: null },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  //** Delete checklist item. */
+  async deleteChecklistItem(id: number) {
+    try {
+      await this.prisma.checklistItem.delete({
+        where: { id },
       });
     } catch (e) {
       console.log(e);

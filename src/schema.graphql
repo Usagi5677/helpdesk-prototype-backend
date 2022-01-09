@@ -29,22 +29,30 @@ type CategoryPageInfo {
 scalar Date
 
 type Mutation {
-  addFollower(id: Int!, newFollowerId: Int!): String!
+  addChecklistItem(description: String!, ticketId: Int!): String!
+  addFollower(newFollowerId: Int!, ticketId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: Int!): String!
+  assignAgent(agentId: Int!, ticketId: Int!): String!
   changeCategoryName(id: Int!, name: String!): String!
   changeUserGroupMode(id: Int!, mode: String!): String!
   changeUserGroupName(id: Int!, name: String!): String!
+  completeChecklistItem(id: Int!): String!
   createCategory(name: String!): String!
   createTicket(body: String!, title: String!): String!
   createUserGroup(mode: String!, name: String!): String!
   deleteCategory(id: Int!): String!
+  deleteChecklistItem(id: Int!): String!
   deleteUserGroup(id: Int!): String!
+  editChecklistItem(description: String!, id: Int!): String!
   flushRedis: String!
-  giveFeedback(feedback: String!, id: Int!, rating: Int!): String!
-  removeFollower(deletingFollowerId: Int!, id: Int!): String!
+  giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!
+  removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
   removeFromUserGroup(id: Int!): String!
+  setOwner(agentId: Int!, ticketId: Int!): String!
   setTicketPriority(id: Int!, priority: String!): String!
   setTicketStatus(id: Int!, status: String!): String!
+  unassignAgent(agentId: Int!, ticketId: Int!): String!
+  uncompleteChecklistItem(id: Int!): String!
 }
 
 type PaginatedCategory {

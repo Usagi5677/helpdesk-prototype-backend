@@ -42,22 +42,22 @@ export class UserService {
     return roles;
   }
 
-  async userHasRole(user: User, roles: Role[]): Promise<boolean> {
-    const userRoles = await this.getUserRolesList(user.id);
+  async userHasRole(userId: number, roles: Role[]): Promise<boolean> {
+    const userRoles = await this.getUserRolesList(userId);
     if (roles.some((r) => userRoles.includes(r))) return true;
     return false;
   }
 
-  async isAdminOrAgent(user: User): Promise<boolean> {
-    return await this.userHasRole(user, ['Admin', 'Agent']);
+  async isAdminOrAgent(userId: number): Promise<boolean> {
+    return await this.userHasRole(userId, ['Admin', 'Agent']);
   }
 
-  async isAdmin(user: User): Promise<boolean> {
-    return await this.userHasRole(user, ['Admin']);
+  async isAdmin(userId: number): Promise<boolean> {
+    return await this.userHasRole(userId, ['Admin']);
   }
 
-  async isAgent(user: User): Promise<boolean> {
-    return await this.userHasRole(user, ['Agent']);
+  async isAgent(userId: number): Promise<boolean> {
+    return await this.userHasRole(userId, ['Agent']);
   }
 
   //** Create user group. */
@@ -180,7 +180,7 @@ export class UserService {
     let conditionalMode = { mode: 'Public' };
 
     // Only these roles can see all results
-    const isAdminOrAgent = await this.isAdminOrAgent(user);
+    const isAdminOrAgent = await this.isAdminOrAgent(user.id);
     if (isAdminOrAgent) {
       conditionalMode = null;
     }
@@ -248,7 +248,7 @@ export class UserService {
         AND: [{ name: { contains, mode: 'insensitive' } }],
       };
       // Only these roles can see all user groups
-      const isAdminOrAgent = await this.isAdminOrAgent(user);
+      const isAdminOrAgent = await this.isAdminOrAgent(user.id);
       if (!isAdminOrAgent) {
         // Otherwise show only public groups
         where.AND.push({

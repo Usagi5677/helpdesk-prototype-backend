@@ -156,6 +156,8 @@ model TicketAssignment {
   ticketId  Int
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
   isOwner   Boolean
+
+  @@unique([userId, ticketId])
 }
 
 model ChecklistItem {
