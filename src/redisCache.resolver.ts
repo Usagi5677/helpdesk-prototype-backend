@@ -9,7 +9,7 @@ export class RedisCacheResolver {
   constructor(private readonly redisCacheService: RedisCacheService) {}
 
   @Query(() => [String], { name: 'redisKeys' })
-  async getKeys(): Promise<[string]> {
+  async getKeys(): Promise<string[]> {
     return await this.redisCacheService.getKeys();
   }
 

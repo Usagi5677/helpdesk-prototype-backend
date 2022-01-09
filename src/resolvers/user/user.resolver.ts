@@ -19,18 +19,26 @@ import {
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { UserService } from 'src/services/user.service';
+import { Profile } from 'src/models/profile.model';
+import { ProfileService } from 'src/services/profile.service';
 
 @Resolver(() => User)
 @UseGuards(GqlAuthGuard, RolesGuard)
 export class UserResolver {
   constructor(
     private prisma: PrismaService,
-    private userService: UserService
+    private userService: UserService,
+    private profileService: ProfileService
   ) {}
 
   @Query(() => User)
   async me(@UserEntity() user: User): Promise<User> {
     return user;
+  }
+
+  @Query(() => Profile)
+  async profile(@UserEntity() user: User): Promise<Profile> {
+    return this.profileService.getProfile(user.userId);
   }
 
   // @Query(() => PaginatedUsers)

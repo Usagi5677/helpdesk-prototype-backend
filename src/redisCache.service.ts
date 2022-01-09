@@ -1,16 +1,43 @@
-import { Injectable, Inject, CACHE_MANAGER } from '@nestjs/common';
-import { Cache } from 'cache-manager';
+import { Injectable } from '@nestjs/common';
+import { createClient, RedisClientType } from 'redis';
 
 @Injectable()
 export class RedisCacheService {
-  constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) {}
-
-  async get(key) {
-    return await this.cache.get(key);
+  constructor() {}
+  async connect(): Promise<RedisClientType<any>> {
+    const client = createClient();
+    client.on('error', (err) => console.log('Redis Client Error', err));
+    await client.connect();
+    return client;
   }
 
-  async set(key, value, ttl?) {
-    await this.cache.set(key, value, { ttl });
+  parseWithDate(jsonString: string): any {
+    var reDateDetect = /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/; // startswith: 2015-04-29T22:06:55
+    var resultObject = JSON.parse(jsonString, (key: any, value: any) => {
+      if (typeof value == 'string' && reDateDetect.exec(value)) {
+        return new Date(value);
+      }
+      return value;
+    });
+    return resultObject;
+  }
+
+  async get(key): Promise<any> {
+    const client = await this.connect();
+    const valueJSON = await client.get(`helpdesk:${key}`);
+    const value = this.parseWithDate(valueJSON);
+    return value;
+  }
+
+  async set(key, value, ttl) {
+    const client = await this.connect();
+    const valueJSON = JSON.stringify(value);
+    return await client.set(`helpdesk:${key}`, valueJSON, { EX: ttl });
+  }
+
+  async setForDay(key, value) {
+    const secondsInDay = 24 * 60 * 60;
+    await this.set(key, value, secondsInDay);
   }
 
   async setForMonth(key, value) {
@@ -18,20 +45,22 @@ export class RedisCacheService {
     await this.set(key, value, secondsInMonth);
   }
 
+  async getKeys() {
+    const client = await this.connect();
+    const keysWithPrefix = await client.keys('helpdesk:*');
+    return keysWithPrefix.map((k) => k.split('helpdesk:')[1]);
+  }
+
   async del(key) {
-    await this.cache.del(key);
+    const client = await this.connect();
+    await client.del(`helpdesk:${key}`);
   }
 
   async deleteAll() {
-    const keys = await this.cache.keys();
+    const keys = await this.getKeys();
     keys.forEach(async (key) => {
       await this.del(key);
     });
     console.log('Redis cache flushed.');
-  }
-
-  async getKeys() {
-    const keys = await this.cache.keys();
-    return keys;
   }
 }

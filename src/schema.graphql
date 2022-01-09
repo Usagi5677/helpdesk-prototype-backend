@@ -65,6 +65,21 @@ type PaginatedUserGroup {
   pageInfo: UserGroupPageInfo
 }
 
+type Profile {
+  department: String!
+  division: String!
+  email: String
+  fullName: String!
+  post: String!
+  rcno: Int!
+  section: String
+  telExtension: Int
+  telMobile: Int
+  telOffice: Int
+  unit: String
+  userId: String!
+}
+
 type Query {
   categories(
     """Paginate after opaque cursor"""
@@ -81,6 +96,7 @@ type Query {
     name: String
   ): PaginatedCategory!
   me: User!
+  profile: Profile!
   redisGet(key: String!): String
   redisKeys: [String!]!
   searchCategory(name: String!): [Category!]!
