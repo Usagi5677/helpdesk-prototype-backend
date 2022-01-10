@@ -182,8 +182,8 @@ Table TicketAttachment {
   ticketId Int [not null]
   ticket Ticket [not null]
   description String [not null]
-  url String [not null]
-  mode String [not null, default: 'Private']
+  url String
+  mode String [not null, default: 'Public']
 }
 
 Enum Role {

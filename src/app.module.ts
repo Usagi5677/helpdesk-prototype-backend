@@ -11,6 +11,7 @@ import config from './configs/config';
 import { GraphqlConfig } from './configs/config.interface';
 import { PrismaModule } from 'nestjs-prisma';
 import { TicketModule } from './resolvers/ticket/ticket.module';
+import { AttachmentModule } from './resolvers/attachment/attachment.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { TicketModule } from './resolvers/ticket/ticket.module';
     AuthModule,
     UserModule,
     TicketModule,
+    AttachmentModule,
   ],
   controllers: [AppController],
   providers: [AppService, AppResolver, DateScalar],

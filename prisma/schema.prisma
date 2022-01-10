@@ -205,6 +205,6 @@ model TicketAttachment {
   ticketId    Int
   ticket      Ticket   @relation(fields: [ticketId], references: [id])
   description String
-  url         String
-  mode        String   @default("Private")
+  url         String?
+  mode        String   @default("Public")
 }
