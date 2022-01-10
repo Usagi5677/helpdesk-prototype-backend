@@ -193,7 +193,7 @@ model TicketComment {
   ticketId  Int
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
   body      String
-  mode      String   @default("Private")
+  mode      String   @default("Public")
 }
 
 model TicketAttachment {

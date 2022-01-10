@@ -420,4 +420,50 @@ export class TicketService {
       throw new InternalServerErrorException('Unexpected error occured.');
     }
   }
+
+  //** Make comment as on a ticket. This function is called directly from a user. */
+  async addComment(
+    user: User,
+    ticketId: number,
+    body: string,
+    isPublic: boolean
+  ) {
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
+    if (!isAdminOrAgent) {
+      // If not an admin or agent, prevent non-followers from commenting on ticket.
+      const ticketFollowing = await this.prisma.ticketFollowing.findFirst({
+        where: { userId: user.id, ticketId },
+      });
+      if (!ticketFollowing) {
+        throw new UnauthorizedException(
+          'You do not have access to this ticket.'
+        );
+      }
+    }
+    let mode = 'Public';
+    if (isAdminOrAgent && isPublic === false) mode = 'Private';
+    this.createComment(user, ticketId, body, mode);
+  }
+
+  //** Create comment. Unlike the above function, this function is called within the api. */
+  async createComment(
+    user: User,
+    ticketId: number,
+    body: string,
+    mode: string
+  ) {
+    try {
+      await this.prisma.ticketComment.create({
+        data: {
+          userId: user.id,
+          ticketId,
+          body,
+          mode,
+        },
+      });
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
 }

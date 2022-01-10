@@ -170,7 +170,7 @@ Table TicketComment {
   ticketId Int [not null]
   ticket Ticket [not null]
   body String [not null]
-  mode String [not null, default: 'Private']
+  mode String [not null, default: 'Public']
 }
 
 Table TicketAttachment {

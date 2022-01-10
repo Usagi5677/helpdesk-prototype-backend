@@ -156,4 +156,15 @@ export class TicketResolver {
     await this.ticketService.deleteChecklistItem(id);
     return `Checklist item deleted.`;
   }
+
+  @Mutation(() => String)
+  async addComment(
+    @UserEntity() user: User,
+    @Args('ticketId') ticketId: number,
+    @Args('body') body: string,
+    @Args('isPublic', { nullable: true }) mode: boolean
+  ): Promise<String> {
+    await this.ticketService.addComment(user, ticketId, body, mode);
+    return `Comment added to ticket.`;
+  }
 }

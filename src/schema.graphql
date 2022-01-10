@@ -30,6 +30,7 @@ scalar Date
 
 type Mutation {
   addChecklistItem(description: String!, ticketId: Int!): String!
+  addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
   addFollower(newFollowerId: Int!, ticketId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: Int!): String!
   assignAgent(agentId: Int!, ticketId: Int!): String!
