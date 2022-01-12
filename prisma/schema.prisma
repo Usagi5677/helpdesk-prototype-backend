@@ -197,14 +197,16 @@ model TicketComment {
 }
 
 model TicketAttachment {
-  id          Int      @id @default(autoincrement())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  ticketId    Int
-  ticket      Ticket   @relation(fields: [ticketId], references: [id])
-  description String
-  url         String?
-  mode        String   @default("Public")
+  id                 Int      @id @default(autoincrement())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  userId             Int
+  user               User     @relation(fields: [userId], references: [id])
+  ticketId           Int
+  ticket             Ticket   @relation(fields: [ticketId], references: [id])
+  description        String
+  mimeType           String?
+  originalName       String?
+  sharepointFileName String?
+  mode               String   @default("Public")
 }

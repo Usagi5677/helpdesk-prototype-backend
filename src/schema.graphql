@@ -103,6 +103,7 @@ type Query {
   searchCategory(name: String!): [Category!]!
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(query: String!): [SearchResult!]!
+  ticketAttachments(ticketId: Int!): [TicketAttachment!]!
   userGroup(id: Int!): UserGroup!
   userGroups(
     """Paginate after opaque cursor"""
@@ -125,6 +126,21 @@ type SearchResult {
   type: String!
   user: User
   userGroup: UserGroup
+}
+
+type TicketAttachment {
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  description: String!
+  id: Int!
+  mimeType: String
+  mode: String!
+  originalName: String
+  sharepointFileName: String
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+  user: User!
 }
 
 type User {

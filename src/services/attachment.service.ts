@@ -9,7 +9,11 @@ import * as http from 'http2';
 import { extname } from 'path';
 import * as qs from 'qs';
 import { lastValueFrom, map } from 'rxjs';
+import { TicketAttachment } from 'src/models/ticket-attachment.model';
+import { User } from 'src/models/user.model';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { RedisCacheService } from 'src/redisCache.service';
+import { TicketService } from './ticket.service';
 
 interface FileOptions {
   path?: string;
@@ -20,12 +24,14 @@ interface FileOptions {
 export class AttachmentService {
   private readonly logger = new Logger(AttachmentService.name);
   private readonly siteUrl = `https://${process.env.SP_URL}/sites/${process.env.SP_SITE_NAME}`;
-  private readonly serverRelativeUrlToFolder = 'Bank-Account';
+  private readonly serverRelativeUrlToFolder = 'Shared Documents/Test';
   private readonly SP_TOKEN_KEY = 'SHAREPOINT_ACCESS_TOKEN';
 
   constructor(
+    private prisma: PrismaService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly httpService: HttpService
+    private readonly httpService: HttpService,
+    private readonly ticketService: TicketService
   ) {}
 
   getInfo(document: Express.Multer.File) {
@@ -72,7 +78,6 @@ export class AttachmentService {
           })
           .pipe(map((resp) => resp.data))
       );
-      console.log(result);
       await this.redisCacheService.set(
         this.SP_TOKEN_KEY,
         result.access_token,
@@ -92,15 +97,12 @@ export class AttachmentService {
     try {
       http;
       return await lastValueFrom(
-        this.httpService
-          .get(url, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'text/plain',
-            },
-            responseType: 'text',
-          })
-          .pipe(map((resp) => ({ data: resp.data })))
+        this.httpService.get(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: 'arraybuffer',
+        })
       );
     } catch (e) {
       throw new NotFoundException('File not found');
@@ -111,9 +113,7 @@ export class AttachmentService {
     file: Express.Multer.File,
     { name, path = '' }: FileOptions
   ) {
-    const fileNameWithExtension = `${(name ?? file.originalname)
-      .replace(new RegExp('/', 'g'), '_')
-      .replace(new RegExp("'", 'g'), '')}${extname(file.originalname)}`;
+    const fileNameWithExtension = name;
     this.logger.debug(
       `${new Date().toLocaleTimeString()} - Upload of file ${fileNameWithExtension} (${(
         file.size /
@@ -156,7 +156,6 @@ export class AttachmentService {
       );
       return result;
     } catch (e) {
-      console.log(e);
       this.logger.error('Thrown Error', e.response.data.error);
       throw new InternalServerErrorException(
         'An error occurred uploading file'
@@ -188,5 +187,19 @@ export class AttachmentService {
     }
   }
 
-  // async createAttachment(user: User, ticketId: number, description: string)
+  async ticketAttachments(
+    user: User,
+    ticketId: number
+  ): Promise<TicketAttachment[]> {
+    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+      user.id,
+      ticketId
+    );
+    const attachments = await this.prisma.ticketAttachment.findMany({
+      where: { ticketId, mode: isAdminOrAgent ? undefined : 'Public' },
+      include: { user: true },
+    });
+    console.log(attachments);
+    return attachments;
+  }
 }

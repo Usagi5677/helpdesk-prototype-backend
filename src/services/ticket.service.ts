@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { Prisma, TicketFollowing, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
 import ConnectionArgs, {
   connectionFromArraySlice,
@@ -428,18 +428,7 @@ export class TicketService {
     body: string,
     isPublic: boolean
   ) {
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
-    if (!isAdminOrAgent) {
-      // If not an admin or agent, prevent non-followers from commenting on ticket.
-      const ticketFollowing = await this.prisma.ticketFollowing.findFirst({
-        where: { userId: user.id, ticketId },
-      });
-      if (!ticketFollowing) {
-        throw new UnauthorizedException(
-          'You do not have access to this ticket.'
-        );
-      }
-    }
+    const [isAdminOrAgent, _] = await this.checkTicketAccess(user.id, ticketId);
     let mode = 'Public';
     if (isAdminOrAgent && isPublic === false) mode = 'Private';
     this.createComment(user, ticketId, body, mode);
@@ -465,5 +454,25 @@ export class TicketService {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
     }
+  }
+
+  //** Checks if user is an admin or agent. If not, checks if user is following ticket. If not, prevent access by throwing an exception. */
+  async checkTicketAccess(
+    userId: number,
+    ticketId: number
+  ): Promise<[boolean, TicketFollowing]> {
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(userId);
+    let ticketFollowing: TicketFollowing = null;
+    if (!isAdminOrAgent) {
+      ticketFollowing = await this.prisma.ticketFollowing.findFirst({
+        where: { userId, ticketId },
+      });
+      if (!ticketFollowing) {
+        throw new UnauthorizedException(
+          'You do not have access to this ticket.'
+        );
+      }
+    }
+    return [isAdminOrAgent, ticketFollowing];
   }
 }

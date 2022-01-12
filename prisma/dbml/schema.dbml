@@ -182,7 +182,9 @@ Table TicketAttachment {
   ticketId Int [not null]
   ticket Ticket [not null]
   description String [not null]
-  url String
+  mimeType String
+  originalName String
+  sharepointFileName String
   mode String [not null, default: 'Public']
 }
 
