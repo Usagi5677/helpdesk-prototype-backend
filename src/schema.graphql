@@ -47,6 +47,8 @@ type Mutation {
   editChecklistItem(description: String!, id: Int!): String!
   flushRedis: String!
   giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!
+  readAllNotifications: Boolean!
+  readNotification(notificationId: Int!): Boolean!
   removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
   removeFromUserGroup(id: Int!): String!
   setOwner(agentId: Int!, ticketId: Int!): String!
@@ -54,6 +56,19 @@ type Mutation {
   setTicketStatus(id: Int!, status: String!): String!
   unassignAgent(agentId: Int!, ticketId: Int!): String!
   uncompleteChecklistItem(id: Int!): String!
+}
+
+type Notification {
+  body: String!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  id: Int!
+  readAt: Date
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+  user: User!
 }
 
 type PaginatedCategory {
@@ -97,6 +112,7 @@ type Query {
     name: String
   ): PaginatedCategory!
   me: User!
+  notifications: [Notification!]!
   profile: Profile!
   redisGet(key: String!): String
   redisKeys: [String!]!
@@ -146,6 +162,7 @@ type TicketAttachment {
 type User {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
+  email: String!
   fullName: String!
   id: Int!
   rcno: Int!

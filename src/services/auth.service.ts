@@ -27,7 +27,8 @@ export class AuthService {
       user = await this.userService.createUser(
         profile.rcno,
         profile.userId,
-        profile.fullName
+        profile.fullName,
+        profile.email
       );
     }
     return user;

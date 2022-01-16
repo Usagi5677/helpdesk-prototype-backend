@@ -67,8 +67,12 @@ export class TicketResolver {
     @Args('ticketId') ticketId: number,
     @Args('newFollowerId') newFollowerId: number
   ): Promise<String> {
-    await this.ticketService.addFollower(user, ticketId, newFollowerId);
-    return `Successfully added follower to ticket.`;
+    const newFollower = await this.ticketService.addFollower(
+      user,
+      ticketId,
+      newFollowerId
+    );
+    return `Successfully added ${newFollower.fullName} to ticket.`;
   }
 
   @Mutation(() => String)

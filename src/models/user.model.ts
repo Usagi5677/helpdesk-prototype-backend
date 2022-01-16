@@ -6,4 +6,5 @@ export class User extends BaseModel {
   rcno: number;
   fullName: string;
   userId: string;
+  email: string;
 }

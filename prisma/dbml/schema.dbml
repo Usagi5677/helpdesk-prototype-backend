@@ -9,6 +9,7 @@ Table User {
   userId String [unique, not null]
   rcno Int [not null]
   fullName String [not null]
+  email String [not null]
   notifications Notification [not null]
   knowledgeBaseEntries KnowledgeBaseEntry [not null]
   roles UserRole [not null]

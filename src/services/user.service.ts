@@ -24,9 +24,12 @@ export class UserService {
   async createUser(
     rcno: number,
     userId: string,
-    fullName: string
+    fullName: string,
+    email: string
   ): Promise<User> {
-    return await this.prisma.user.create({ data: { rcno, userId, fullName } });
+    return await this.prisma.user.create({
+      data: { rcno, userId, fullName, email },
+    });
   }
 
   //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */

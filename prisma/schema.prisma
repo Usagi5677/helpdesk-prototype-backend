@@ -19,6 +19,7 @@ model User {
   userId               String               @unique
   rcno                 Int
   fullName             String
+  email                String
   notifications        Notification[]
   knowledgeBaseEntries KnowledgeBaseEntry[]
   roles                UserRole[]

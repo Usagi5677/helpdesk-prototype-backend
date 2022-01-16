@@ -12,6 +12,7 @@ import { GraphqlConfig } from './configs/config.interface';
 import { PrismaModule } from 'nestjs-prisma';
 import { TicketModule } from './resolvers/ticket/ticket.module';
 import { AttachmentModule } from './resolvers/attachment/attachment.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
@@ -36,6 +37,12 @@ import { AttachmentModule } from './resolvers/attachment/attachment.module';
     }),
     PrismaModule.forRoot({
       isGlobal: true,
+    }),
+    BullModule.forRoot({
+      redis: {
+        host: 'localhost',
+        port: 6379,
+      },
     }),
     AuthModule,
     UserModule,

@@ -18,11 +18,14 @@ import { Priority } from 'src/common/enums/priority';
 import { Status } from 'src/common/enums/status';
 import { UserService } from './user.service';
 import { Ticket } from 'src/models/ticket.model';
+import { NotificationService } from './notification.service';
+import emailTemplate from 'src/common/helpers/emailTemplate';
 @Injectable()
 export class TicketService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
+    private notificationService: NotificationService,
     private readonly redisCacheService: RedisCacheService
   ) {}
 
@@ -184,20 +187,50 @@ export class TicketService {
   }
 
   //** Add follower to ticket. */
-  async addFollower(user: User, ticketId: number, newFollowerId: number) {
+  async addFollower(
+    user: User,
+    ticketId: number,
+    newFollowerId: number
+  ): Promise<User> {
     const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
     if (!isAdminOrAgent) {
-      const ticket = await this.prisma.ticket.findFirst({
-        where: { id: ticketId },
-      });
       if (ticket.createdById !== user.id) {
         throw new UnauthorizedException('Not authorized to add followers.');
       }
+    }
+    const newFollower = await this.prisma.user.findFirst({
+      where: { id: newFollowerId },
+    });
+    if (!newFollower) {
+      throw new BadRequestException('Invalid user.');
     }
     try {
       await this.prisma.ticketFollowing.create({
         data: { ticketId, userId: newFollowerId },
       });
+      const body = `${user.fullName} has added you to a ticket.`;
+      await this.notificationService.createInBackground(
+        {
+          userId: newFollowerId,
+          body,
+        },
+        {
+          to: [newFollower.email],
+          subject: `Added to ticket`,
+          html: emailTemplate({
+            text: body,
+            // extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
+            // callToAction: {
+            //   link: `${process.env.APP_URL}/cases/${docOnCase.case.id}/#documents`,
+            //   title: 'View Case Documents',
+            // },
+          }),
+        }
+      );
+      return newFollower;
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
