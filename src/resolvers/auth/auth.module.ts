@@ -10,6 +10,7 @@ import { SecurityConfig } from 'src/configs/config.interface';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { ProfileModule } from '../profile/profile.module';
 import { UserModule } from '../user/user.module';
+import { RedisCacheModule } from 'src/redisCache.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { UserModule } from '../user/user.module';
     PrismaModule,
     ProfileModule,
     UserModule,
+    RedisCacheModule,
   ],
   providers: [AuthService, JwtStrategy, GqlAuthGuard, PasswordService],
   exports: [GqlAuthGuard],

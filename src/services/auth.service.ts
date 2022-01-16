@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '@prisma/client';
@@ -7,6 +11,7 @@ import { SecurityConfig } from '../configs/config.interface';
 import { Token } from '../models/token.model';
 import { ProfileService } from './profile.service';
 import { UserService } from './user.service';
+import { RedisCacheService } from 'src/redisCache.service';
 
 @Injectable()
 export class AuthService {
@@ -15,21 +20,31 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly profileService: ProfileService,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly redisCacheService: RedisCacheService
   ) {}
 
   async validateUser(uuid: string): Promise<User> {
-    let user = await this.prisma.user.findUnique({ where: { userId: uuid } });
+    // First check cache
+    let user = await this.redisCacheService.get(`user-uuid-${uuid}`);
     if (!user) {
-      // If user not found in helpdesk system database, call APS
-      const profile = await this.profileService.getProfile(uuid);
-      // Create new user based on APS response
-      user = await this.userService.createUser(
-        profile.rcno,
-        profile.userId,
-        profile.fullName,
-        profile.email
-      );
+      // If not in cache, call database
+      user = await this.prisma.user.findUnique({ where: { userId: uuid } });
+      if (!user) {
+        // If user not found in helpdesk system database, call APS
+        const profile = await this.profileService.getProfile(uuid);
+        // Create new user based on APS response
+        user = await this.userService.createUser(
+          profile.rcno,
+          profile.userId,
+          profile.fullName,
+          profile.email
+        );
+        if (!user) {
+          throw new BadRequestException('Invalid user.');
+        }
+      }
+      await this.redisCacheService.setForMonth(`user-uuid-${uuid}`, user);
     }
     return user;
   }

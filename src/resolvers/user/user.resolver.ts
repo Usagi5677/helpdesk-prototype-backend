@@ -21,6 +21,7 @@ import { RolesGuard } from 'src/guards/roles.guard';
 import { UserService } from 'src/services/user.service';
 import { Profile } from 'src/models/profile.model';
 import { ProfileService } from 'src/services/profile.service';
+import { UserWithRoles } from 'src/models/user-with-roles.model';
 
 @Resolver(() => User)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -31,9 +32,12 @@ export class UserResolver {
     private profileService: ProfileService
   ) {}
 
-  @Query(() => User)
-  async me(@UserEntity() user: User): Promise<User> {
-    return user;
+  @Query(() => UserWithRoles)
+  async me(@UserEntity() user: User): Promise<UserWithRoles> {
+    const userWithRoles = new UserWithRoles();
+    Object.assign(userWithRoles, user);
+    userWithRoles.roles = await this.userService.getUserRolesList(user.id);
+    return userWithRoles;
   }
 
   @Query(() => Profile)

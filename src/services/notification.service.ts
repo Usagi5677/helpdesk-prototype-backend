@@ -64,7 +64,6 @@ export class NotificationService {
     notification: Notification,
     emailOptions?: SendMailOptions
   ) {
-    console.log(emailOptions);
     await this.notificationQueue.add('create', { notification, emailOptions });
   }
 
