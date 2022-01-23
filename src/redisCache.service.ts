@@ -25,12 +25,15 @@ export class RedisCacheService {
   async get(key): Promise<any> {
     const client = await this.connect();
     const valueJSON = await client.get(`helpdesk:${key}`);
+    client.quit();
     const value = this.parseWithDate(valueJSON);
+    console.log(`CACHE\t${key}: ${value}`);
     return value;
   }
 
   async set(key, value, ttl) {
     const client = await this.connect();
+    client.quit();
     const valueJSON = JSON.stringify(value);
     return await client.set(`helpdesk:${key}`, valueJSON, { EX: ttl });
   }
@@ -54,6 +57,7 @@ export class RedisCacheService {
   async del(key) {
     const client = await this.connect();
     await client.del(`helpdesk:${key}`);
+    client.quit();
   }
 
   async deleteAll() {
