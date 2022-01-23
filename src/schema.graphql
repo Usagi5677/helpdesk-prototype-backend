@@ -199,15 +199,10 @@ type UserGroupPageInfo {
 }
 
 type UserWithRoles {
-  """Identifies the date and time when the object was created."""
-  createdAt: Date!
   email: String!
   fullName: String!
   id: Int!
   rcno: Int!
   roles: [String!]!
-
-  """Identifies the date and time when the object was last updated."""
-  updatedAt: Date!
   userId: String!
 }

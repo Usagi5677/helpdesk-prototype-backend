@@ -1,7 +1,11 @@
 import { ObjectType } from '@nestjs/graphql';
-import { User } from './user.model';
 
 @ObjectType()
-export class UserWithRoles extends User {
+export class UserWithRoles {
+  id: number;
+  rcno: number;
+  fullName: string;
+  userId: string;
+  email: string;
   roles: string[];
 }
