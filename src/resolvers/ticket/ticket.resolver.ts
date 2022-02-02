@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
@@ -9,6 +9,8 @@ import { UserEntity } from 'src/decorators/user.decorator';
 import { User } from 'src/models/user.model';
 import { Priority } from 'src/common/enums/priority';
 import { Status } from 'src/common/enums/status';
+import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
+import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -170,5 +172,24 @@ export class TicketResolver {
   ): Promise<String> {
     await this.ticketService.addComment(user, ticketId, body, mode);
     return `Comment added to ticket.`;
+  }
+
+  @Query(() => PaginatedTickets)
+  async myTickets(
+    @UserEntity() user: User,
+    @Args() args: TicketConnectionArgs
+  ): Promise<PaginatedTickets> {
+    (args.self = true), (args.createdById = user.id);
+    return await this.ticketService.getTicketsWithPagination(user, args);
+  }
+
+  @Roles('Admin', 'Agent')
+  @Query(() => PaginatedTickets)
+  async tickets(
+    @UserEntity() user: User,
+    @Args() args: TicketConnectionArgs
+  ): Promise<PaginatedTickets> {
+    args.self = false;
+    return await this.ticketService.getTicketsWithPagination(user, args);
   }
 }

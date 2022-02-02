@@ -76,9 +76,21 @@ type PaginatedCategory {
   pageInfo: CategoryPageInfo
 }
 
+type PaginatedTickets {
+  edges: [TicketEdge!]
+  pageInfo: TicketPageInfo
+}
+
 type PaginatedUserGroup {
   edges: [UserGroupEdge!]
   pageInfo: UserGroupPageInfo
+}
+
+"""Ticket priorities."""
+enum Priority {
+  High
+  Low
+  Normal
 }
 
 type Profile {
@@ -112,6 +124,27 @@ type Query {
     name: String
   ): PaginatedCategory!
   me: UserWithRoles!
+  myTickets(
+    """Paginate after opaque cursor"""
+    after: String
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryId: Int
+    createdById: Int
+
+    """Paginate first"""
+    first: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    self: Boolean
+    status: Status
+    to: Date
+  ): PaginatedTickets!
   notifications: [Notification!]!
   profile: Profile!
   redisGet(key: String!): String
@@ -120,6 +153,27 @@ type Query {
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(query: String!): [SearchResult!]!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
+  tickets(
+    """Paginate after opaque cursor"""
+    after: String
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryId: Int
+    createdById: Int
+
+    """Paginate first"""
+    first: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    self: Boolean
+    status: Status
+    to: Date
+  ): PaginatedTickets!
   userGroup(id: Int!): UserGroup!
   userGroups(
     """Paginate after opaque cursor"""
@@ -144,6 +198,34 @@ type SearchResult {
   userGroup: UserGroup
 }
 
+"""Ticket statuses."""
+enum Status {
+  Closed
+  Open
+  Pending
+  Reopened
+  Solved
+}
+
+type Ticket {
+  body: String
+  categories: [Category!]!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  createdBy: User!
+  feedback: String!
+  id: Int!
+  priority: Priority
+  rating: Int!
+  started: Boolean!
+  status: Status!
+  title: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+}
+
 type TicketAttachment {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
@@ -157,6 +239,19 @@ type TicketAttachment {
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
   user: User!
+}
+
+type TicketEdge {
+  cursor: String
+  node: Ticket
+}
+
+type TicketPageInfo {
+  count: Int!
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
 }
 
 type User {

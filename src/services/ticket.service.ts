@@ -20,6 +20,9 @@ import { UserService } from './user.service';
 import { Ticket } from 'src/models/ticket.model';
 import { NotificationService } from './notification.service';
 import emailTemplate from 'src/common/helpers/emailTemplate';
+import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
+import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
+import * as moment from 'moment';
 @Injectable()
 export class TicketService {
   constructor(
@@ -507,5 +510,89 @@ export class TicketService {
       }
     }
     return [isAdminOrAgent, ticketFollowing];
+  }
+
+  //** Get user groups. Results are paginated. User cursor argument to go forward/backward. */
+  async getTicketsWithPagination(
+    user: User,
+    args: TicketConnectionArgs
+  ): Promise<PaginatedTickets> {
+    const { limit, offset } = getPagingParameters(args);
+    const limitPlusOne = limit + 1;
+    const {
+      search,
+      status,
+      createdById,
+      categoryId,
+      priority,
+      self,
+      from,
+      to,
+    } = args;
+
+    // Only these roles can see all results, others can only see thier own tickets
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
+    if (!self && !isAdminOrAgent) {
+      throw new UnauthorizedException('Unauthorized.');
+    }
+    let where: any = { AND: [] };
+    if (createdById) {
+      where.AND.push({ createdById });
+    }
+    if (status) {
+      where.AND.push({ status });
+    }
+    if (status) {
+      where.AND.push({ status });
+    }
+    if (categoryId) {
+      where.AND.push({ categories: { some: { id: categoryId } } });
+    }
+    if (priority) {
+      where.AND.push({ priority });
+    }
+    if (from && to) {
+      where.AND.push(
+        { createdAt: { gte: moment(from).startOf('day').toDate() } },
+        { createdAt: { lte: moment(to).endOf('day').toDate() } }
+      );
+    }
+    if (search) {
+      const or: any = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { body: { contains: search, mode: 'insensitive' } },
+      ];
+      // If search contains all numbers, search the ticket ids as well
+      if (/^(0|[1-9]\d*)$/.test(search)) {
+        or.push({ id: parseInt(search) });
+      }
+      where.AND.push({
+        OR: or,
+      });
+    }
+    const tickets = await this.prisma.ticket.findMany({
+      skip: offset,
+      take: limitPlusOne,
+      where,
+      include: { createdBy: true },
+    });
+    const count = await this.prisma.ticket.count({ where });
+    const { edges, pageInfo } = connectionFromArraySlice(
+      tickets.slice(0, limit),
+      args,
+      {
+        arrayLength: count,
+        sliceStart: offset,
+      }
+    );
+    return {
+      edges,
+      pageInfo: {
+        ...pageInfo,
+        count,
+        hasNextPage: offset + limit < count,
+        hasPreviousPage: offset >= limit,
+      },
+    };
   }
 }
