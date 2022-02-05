@@ -109,6 +109,7 @@ type Profile {
 }
 
 type Query {
+  appUsers: [User!]!
   categories(
     """Paginate after opaque cursor"""
     after: String

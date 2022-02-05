@@ -116,4 +116,10 @@ export class UserResolver {
       });
     }
   }
+
+  @Roles('Admin')
+  @Query(() => [User])
+  async appUsers(): Promise<User[]> {
+    return await this.prisma.user.findMany();
+  }
 }

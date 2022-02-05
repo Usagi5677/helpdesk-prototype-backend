@@ -26,7 +26,6 @@ export class RedisCacheService {
     const client = await this.connect();
     const valueJSON = await client.get(`helpdesk:${key}`);
     const value = this.parseWithDate(valueJSON);
-    console.log(`CACHE\t${key}: ${value}`);
     client.quit();
     return value;
   }
