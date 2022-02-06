@@ -56,6 +56,10 @@ Table UserRole {
   userId Int [not null]
   user User [not null]
   role Role [not null]
+
+  indexes {
+    (userId, role) [unique]
+  }
 }
 
 Table UserGroup {

@@ -13,11 +13,14 @@ import {
 } from 'src/common/pagination/connection-args';
 import { PaginatedUserGroup } from 'src/models/pagination/user-group-connection.model';
 import { SearchResult } from 'src/models/search-result.model';
+import { APSService } from './aps.service';
+import { RoleEnum } from 'src/common/enums/roles';
 @Injectable()
 export class UserService {
   constructor(
     private prisma: PrismaService,
-    private readonly redisCacheService: RedisCacheService
+    private readonly redisCacheService: RedisCacheService,
+    private readonly apsService: APSService
   ) {}
 
   //** Create user. Only to be called by the system, not a user. */
@@ -25,10 +28,17 @@ export class UserService {
     rcno: number,
     userId: string,
     fullName: string,
-    email: string
+    email: string,
+    roles?: RoleEnum[]
   ): Promise<User> {
     return await this.prisma.user.create({
-      data: { rcno, userId, fullName, email },
+      data: {
+        rcno,
+        userId,
+        fullName,
+        email,
+        roles: { create: roles.map((role) => ({ role })) },
+      },
     });
   }
 
@@ -294,5 +304,29 @@ export class UserService {
       searchResults.push(searchResult);
     });
     return searchResults;
+  }
+
+  async addAppUser(userId: string, roles: RoleEnum[]) {
+    let user = await this.prisma.user.findFirst({
+      where: { userId },
+      include: { roles: true },
+    });
+    if (!user) {
+      const profile = await this.apsService.getProfile(userId);
+      if (!profile) {
+        throw new BadRequestException('Invalid user.');
+      }
+      await this.createUser(
+        profile.rcno,
+        profile.userId,
+        profile.fullName,
+        profile.email,
+        roles
+      );
+      return;
+    }
+    if (user.roles.length > 0) {
+      throw new BadRequestException('App user already exists.');
+    }
   }
 }

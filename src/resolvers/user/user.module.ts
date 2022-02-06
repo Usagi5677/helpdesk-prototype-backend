@@ -4,16 +4,17 @@ import { UserService } from '../../services/user.service';
 import { RedisCacheModule } from 'src/redisCache.module';
 import { UserGroupResolver } from './user-group.resolver';
 import { SearchResolver } from './search.resolver';
-import { ProfileService } from 'src/services/profile.service';
+import { APSService } from 'src/services/aps.service';
+import { APSModule } from '../profile/profile.module';
 
 @Module({
-  imports: [RedisCacheModule],
+  imports: [RedisCacheModule, RedisCacheModule, APSModule],
   providers: [
     UserResolver,
     UserGroupResolver,
     SearchResolver,
     UserService,
-    ProfileService,
+    APSService,
   ],
   exports: [UserService],
 })

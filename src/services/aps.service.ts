@@ -2,9 +2,10 @@ import { RedisCacheService } from 'src/redisCache.service';
 import { Profile } from 'src/models/profile.model';
 import axios from 'axios';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { User } from 'src/models/user.model';
 
 @Injectable()
-export class ProfileService {
+export class APSService {
   constructor(private readonly redisCacheService: RedisCacheService) {}
 
   /** Get profile from APS and cache for 7 days */
@@ -67,5 +68,57 @@ export class ProfileService {
       await this.redisCacheService.set(`uuid-${uuid}`, profile, secondsInWeek);
     }
     return profile;
+  }
+
+  /** Search employees from APS */
+  async searchAPS(searchQuery: string): Promise<User[]> {
+    const query = {
+      operationName: 'search',
+      variables: { employeeMeta: searchQuery },
+      query: `
+              query search($employeeMeta: String!) {
+                employeeSearchWithoutPagination(
+                  employeeMeta: $employeeMeta
+                ) {
+                  user_id
+                  id
+                  full_name
+                  rcno
+                }
+              }
+            `,
+    };
+    const options = {
+      headers: {
+        Authorization: `Bearer ${process.env.APS_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    };
+    const users: User[] = [];
+    await axios
+      .post(process.env.APS_API_URL, JSON.stringify(query), options)
+      .then((data) => {
+        if (
+          data.status === 200 &&
+          data.data.data.employeeSearchWithoutPagination
+        ) {
+          const resp = data.data.data.employeeSearchWithoutPagination;
+          resp.forEach((r) => {
+            const user = new User();
+            if (r.user_id) {
+              user.id = r.id;
+              user.userId = r.user_id;
+              user.fullName = r.full_name;
+              user.rcno = r.rcno;
+              users.push(user);
+            }
+          });
+        }
+      })
+      .catch((error) => {
+        console.log(error.response.data.errors);
+        throw new InternalServerErrorException();
+      });
+    return users;
   }
 }

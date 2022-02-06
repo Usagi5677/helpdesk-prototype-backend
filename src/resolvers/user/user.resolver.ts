@@ -20,8 +20,11 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { UserService } from 'src/services/user.service';
 import { Profile } from 'src/models/profile.model';
-import { ProfileService } from 'src/services/profile.service';
+import { APSService } from 'src/services/aps.service';
 import { UserWithRoles } from 'src/models/user-with-roles.model';
+import { Role } from '@prisma/client';
+import { RedisCacheService } from 'src/redisCache.service';
+import { RoleEnum } from 'src/common/enums/roles';
 
 @Resolver(() => User)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -29,7 +32,8 @@ export class UserResolver {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
-    private profileService: ProfileService
+    private apsService: APSService,
+    private redisCacheService: RedisCacheService
   ) {}
 
   @Query(() => UserWithRoles)
@@ -42,7 +46,37 @@ export class UserResolver {
 
   @Query(() => Profile)
   async profile(@UserEntity() user: User): Promise<Profile> {
-    return this.profileService.getProfile(user.userId);
+    return this.apsService.getProfile(user.userId);
+  }
+
+  /** Search APS users. */
+  @Query(() => [User])
+  async searchAPSUsers(@Args('query') query: string): Promise<User[]> {
+    return await this.apsService.searchAPS(query);
+  }
+
+  /** Add app user with roles. If user does not exist in db, fetches from APS. */
+  @Roles('Admin')
+  @Mutation(() => String)
+  async addAppUser(
+    @Args('userId') userId: string,
+    @Args('roles', { type: () => [RoleEnum] }) roles: RoleEnum[]
+  ): Promise<string> {
+    await this.userService.addAppUser(userId, roles);
+    await this.redisCacheService.del(`user-uuid-${userId}`);
+    return 'App user added.';
+  }
+
+  /** Remove role from user. */
+  @Roles('Admin')
+  @Mutation(() => String)
+  async removeUserRole(
+    @Args('userId') userId: number,
+    @Args('role', { type: () => RoleEnum }) role: RoleEnum
+  ): Promise<string> {
+    await this.prisma.userRole.deleteMany({ where: { userId, role } });
+    await this.redisCacheService.del(`user-uuid-${userId}`);
+    return 'User role removed.';
   }
 
   // @Query(() => PaginatedUsers)

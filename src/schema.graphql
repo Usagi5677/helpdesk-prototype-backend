@@ -29,6 +29,7 @@ type CategoryPageInfo {
 scalar Date
 
 type Mutation {
+  addAppUser(roles: [Role!]!, userId: String!): String!
   addChecklistItem(description: String!, ticketId: Int!): String!
   addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
   addFollower(newFollowerId: Int!, ticketId: Int!): String!
@@ -51,6 +52,7 @@ type Mutation {
   readNotification(notificationId: Int!): Boolean!
   removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
   removeFromUserGroup(id: Int!): String!
+  removeUserRole(role: Role!, userId: Int!): String!
   setOwner(agentId: Int!, ticketId: Int!): String!
   setTicketPriority(id: Int!, priority: String!): String!
   setTicketStatus(id: Int!, status: String!): String!
@@ -150,6 +152,7 @@ type Query {
   profile: Profile!
   redisGet(key: String!): String
   redisKeys: [String!]!
+  searchAPSUsers(query: String!): [User!]!
   searchCategory(name: String!): [Category!]!
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(query: String!): [SearchResult!]!
@@ -193,7 +196,7 @@ type Query {
 }
 
 """All user roles."""
-enum Roles {
+enum Role {
   Admin
   Agent
 }
@@ -268,7 +271,7 @@ type User {
   fullName: String!
   id: Int!
   rcno: Int!
-  roles: [Roles!]
+  roles: [Role!]
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
