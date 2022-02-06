@@ -120,6 +120,12 @@ export class UserResolver {
   @Roles('Admin')
   @Query(() => [User])
   async appUsers(): Promise<User[]> {
-    return await this.prisma.user.findMany();
+    const users: any = await this.prisma.user.findMany({
+      include: { roles: true },
+    });
+    users.forEach((user) => {
+      user.roles = user.roles.map((role) => role.role);
+    });
+    return users;
   }
 }

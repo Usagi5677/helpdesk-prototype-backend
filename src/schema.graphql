@@ -192,6 +192,12 @@ type Query {
   ): PaginatedUserGroup!
 }
 
+"""All user roles."""
+enum Roles {
+  Admin
+  Agent
+}
+
 type SearchResult {
   name: String!
   type: String!
@@ -262,6 +268,7 @@ type User {
   fullName: String!
   id: Int!
   rcno: Int!
+  roles: [Roles!]
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!

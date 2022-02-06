@@ -1,4 +1,5 @@
-import { ObjectType } from '@nestjs/graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { Roles } from 'src/common/enums/roles';
 import { BaseModel } from './base.model';
 
 @ObjectType()
@@ -7,4 +8,5 @@ export class User extends BaseModel {
   fullName: string;
   userId: string;
   email: string;
+  roles?: Roles[];
 }
