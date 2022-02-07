@@ -157,6 +157,7 @@ export class UserResolver {
     const users: any = await this.prisma.user.findMany({
       where: { roles: { some: { role: { in: ['Agent', 'Admin'] } } } },
       include: { roles: { orderBy: { role: 'asc' } } },
+      orderBy: { rcno: 'asc' },
     });
     users.forEach((user) => {
       user.roles = user.roles.map((role) => role.role);
