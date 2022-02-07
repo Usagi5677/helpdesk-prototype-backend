@@ -31,6 +31,7 @@ export class UserService {
     email: string,
     roles?: RoleEnum[]
   ): Promise<User> {
+    if (!roles) roles = [];
     return await this.prisma.user.create({
       data: {
         rcno,
@@ -311,6 +312,8 @@ export class UserService {
       where: { userId },
       include: { roles: true },
     });
+
+    // If user doesn't exist on the system, fetch from APS, then create user with roles.
     if (!user) {
       const profile = await this.apsService.getProfile(userId);
       if (!profile) {
@@ -325,8 +328,12 @@ export class UserService {
       );
       return;
     }
-    if (user.roles.length > 0) {
-      throw new BadRequestException('App user already exists.');
-    }
+
+    // If user does exist, remove existing roles and add new roles.
+    await this.prisma.userRole.deleteMany({ where: { userId: user.id } });
+    await this.prisma.userRole.createMany({
+      data: roles.map((role) => ({ userId: user.id, role })),
+    });
+    await this.redisCacheService.del(`user-uuid-${userId}`);
   }
 }

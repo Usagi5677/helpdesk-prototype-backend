@@ -155,7 +155,8 @@ export class UserResolver {
   @Query(() => [User])
   async appUsers(): Promise<User[]> {
     const users: any = await this.prisma.user.findMany({
-      include: { roles: true },
+      where: { roles: { some: { role: { in: ['Agent', 'Admin'] } } } },
+      include: { roles: { orderBy: { role: 'asc' } } },
     });
     users.forEach((user) => {
       user.roles = user.roles.map((role) => role.role);
