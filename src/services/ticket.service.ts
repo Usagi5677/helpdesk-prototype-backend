@@ -102,6 +102,7 @@ export class TicketService {
       edges,
       pageInfo: {
         ...pageInfo,
+        count,
         hasNextPage: offset + limit < count,
         hasPreviousPage: offset >= limit,
       },
