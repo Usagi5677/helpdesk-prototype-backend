@@ -33,11 +33,9 @@ type Mutation {
   addChecklistItem(description: String!, ticketId: Int!): String!
   addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
   addFollower(newFollowerId: Int!, ticketId: Int!): String!
-  addToUserGroup(userGroupId: Int!, userId: Int!): String!
+  addToUserGroup(userGroupId: Int!, userId: String!): String!
   assignAgent(agentId: Int!, ticketId: Int!): String!
   changeCategoryName(id: Int!, name: String!): String!
-  changeUserGroupMode(id: Int!, mode: String!): String!
-  changeUserGroupName(id: Int!, name: String!): String!
   completeChecklistItem(id: Int!): String!
   createCategory(name: String!): String!
   createTicket(body: String!, title: String!): String!
@@ -46,12 +44,13 @@ type Mutation {
   deleteChecklistItem(id: Int!): String!
   deleteUserGroup(id: Int!): String!
   editChecklistItem(description: String!, id: Int!): String!
+  editUserGroup(id: Int!, mode: String!, name: String!): String!
   flushRedis: String!
   giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!
   readAllNotifications: Boolean!
   readNotification(notificationId: Int!): Boolean!
   removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
-  removeFromUserGroup(id: Int!): String!
+  removeFromUserGroup(userGroupId: Int!, userId: Int!): String!
   removeUserRole(role: Role!, userId: Int!): String!
   setOwner(agentId: Int!, ticketId: Int!): String!
   setTicketPriority(id: Int!, priority: String!): String!

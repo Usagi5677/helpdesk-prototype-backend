@@ -15,6 +15,8 @@ import { PaginatedUserGroup } from 'src/models/pagination/user-group-connection.
 import { SearchResult } from 'src/models/search-result.model';
 import { APSService } from './aps.service';
 import { RoleEnum } from 'src/common/enums/roles';
+import { UserGroup as UserGroupModel } from 'src/models/user-group.model';
+import { Profile } from 'src/models/profile.model';
 @Injectable()
 export class UserService {
   constructor(
@@ -94,10 +96,13 @@ export class UserService {
   }
 
   //** Change name of user group. */
-  async changeUserGroupName(id: number, name: string) {
+  async editUserGroup(id: number, name: string, mode: string) {
+    if (mode !== 'Private' && mode !== 'Public') {
+      throw new BadRequestException('Invalid mode.');
+    }
     try {
       await this.prisma.userGroup.update({
-        data: { name },
+        data: { name, mode },
         where: { id },
       });
     } catch (e) {
@@ -110,22 +115,6 @@ export class UserService {
         console.log(e);
         throw new InternalServerErrorException('Unexpected error occured.');
       }
-    }
-  }
-
-  //** Change mode of user group. */
-  async changeUserGroupMode(id: number, mode: string) {
-    if (mode !== 'Private' && mode !== 'Public') {
-      throw new BadRequestException('Invalid mode.');
-    }
-    try {
-      await this.prisma.userGroup.update({
-        data: { mode },
-        where: { id },
-      });
-    } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
     }
   }
 
@@ -142,10 +131,11 @@ export class UserService {
   }
 
   //** Add user to user group. */
-  async addToUserGroup(userId: number, userGroupId: number) {
+  async addToUserGroup(userId: string, userGroupId: number) {
+    const [user, _] = await this.createIfNotExists(userId);
     try {
       await this.prisma.userGroupUser.create({
-        data: { userId, userGroupId },
+        data: { userId: user.id, userGroupId },
       });
     } catch (e) {
       if (
@@ -160,10 +150,10 @@ export class UserService {
   }
 
   //** Remove user from user group. */
-  async removeFromUserGroup(id: number) {
+  async removeFromUserGroup(userId: number, userGroupId: number) {
     try {
-      await this.prisma.userGroupUser.delete({
-        where: { id },
+      await this.prisma.userGroupUser.deleteMany({
+        where: { userId, userGroupId },
       });
     } catch (e) {
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -176,7 +166,6 @@ export class UserService {
       where: { id },
       include: { userGroupUsers: { include: { user: true } } },
     });
-    console.log(userGroupResp);
     if (!userGroupResp) {
       throw new BadRequestException('User group does not exist.');
     }
@@ -185,33 +174,30 @@ export class UserService {
 
   //** Get user groups. Results are paginated. User cursor argument to go forward/backward. */
   async getUserGroupsWithPagination(
-    user: User,
     args: UserGroupConnectionArgs
   ): Promise<PaginatedUserGroup> {
     const { limit, offset } = getPagingParameters(args);
     const limitPlusOne = limit + 1;
     const { name } = args;
-    let conditionalMode = { mode: 'Public' };
-
-    // Only these roles can see all results
-    const isAdminOrAgent = await this.isAdminOrAgent(user.id);
-    if (isAdminOrAgent) {
-      conditionalMode = null;
-    }
     const where: any = {
-      AND: [
-        { name: { contains: name ?? '', mode: 'insensitive' } },
-        conditionalMode,
-      ],
+      AND: [{ name: { contains: name ?? '', mode: 'insensitive' } }],
     };
     const userGroups = await this.prisma.userGroup.findMany({
       skip: offset,
       take: limitPlusOne,
       where,
+      include: { userGroupUsers: { include: { user: true } } },
+    });
+    const userGroupsResp: UserGroupModel[] = [];
+    userGroups.forEach((userGroup) => {
+      const userGroupResp = new UserGroupModel();
+      Object.assign(userGroupResp, userGroup);
+      userGroupResp.users = userGroup.userGroupUsers.map((ugu) => ugu.user);
+      userGroupsResp.push(userGroupResp);
     });
     const count = await this.prisma.userGroup.count({ where });
     const { edges, pageInfo } = connectionFromArraySlice(
-      userGroups.slice(0, limit),
+      userGroupsResp.slice(0, limit),
       args,
       {
         arrayLength: count,
@@ -222,6 +208,7 @@ export class UserService {
       edges,
       pageInfo: {
         ...pageInfo,
+        count,
         hasNextPage: offset + limit < count,
         hasPreviousPage: offset >= limit,
       },
@@ -335,5 +322,24 @@ export class UserService {
       data: roles.map((role) => ({ userId: user.id, role })),
     });
     await this.redisCacheService.del(`user-uuid-${userId}`);
+  }
+
+  async createIfNotExists(userId: string): Promise<[User, Profile]> {
+    let user = await this.prisma.user.findFirst({
+      where: { userId },
+    });
+    const profile = await this.apsService.getProfile(userId);
+    if (!profile) {
+      throw new BadRequestException('Invalid user.');
+    }
+    if (!user) {
+      user = await this.createUser(
+        profile.rcno,
+        profile.userId,
+        profile.fullName,
+        profile.email
+      );
+    }
+    return [user, profile];
   }
 }

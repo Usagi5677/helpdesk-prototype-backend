@@ -25,12 +25,10 @@ export class UserGroupResolver {
     return userGroup;
   }
 
+  @Roles('Admin', 'Agent')
   @Query(() => PaginatedUserGroup)
-  async userGroups(
-    @UserEntity() user: User,
-    @Args() args: UserGroupConnectionArgs
-  ) {
-    return await this.userService.getUserGroupsWithPagination(user, args);
+  async userGroups(@Args() args: UserGroupConnectionArgs) {
+    return await this.userService.getUserGroupsWithPagination(args);
   }
 
   @Roles('Admin')
@@ -46,22 +44,13 @@ export class UserGroupResolver {
 
   @Roles('Admin')
   @Mutation(() => String)
-  async changeUserGroupName(
+  async editUserGroup(
     @Args('id') id: number,
-    @Args('name') name: string
-  ): Promise<String> {
-    await this.userService.changeUserGroupName(id, name);
-    return `Changed user group name to ${name}.`;
-  }
-
-  @Roles('Admin')
-  @Mutation(() => String)
-  async changeUserGroupMode(
-    @Args('id') id: number,
+    @Args('name') name: string,
     @Args('mode') mode: string
   ): Promise<String> {
-    await this.userService.changeUserGroupMode(id, mode);
-    return `Changed user group to ${mode}.`;
+    await this.userService.editUserGroup(id, name, mode);
+    return `User group updated.`;
   }
 
   @Roles('Admin')
@@ -74,7 +63,7 @@ export class UserGroupResolver {
   @Roles('Admin')
   @Mutation(() => String)
   async addToUserGroup(
-    @Args('userId') userId: number,
+    @Args('userId') userId: string,
     @Args('userGroupId') userGroupId: number
   ): Promise<String> {
     await this.userService.addToUserGroup(userId, userGroupId);
@@ -83,8 +72,11 @@ export class UserGroupResolver {
 
   @Roles('Admin')
   @Mutation(() => String)
-  async removeFromUserGroup(@Args('id') id: number): Promise<String> {
-    await this.userService.removeFromUserGroup(id);
+  async removeFromUserGroup(
+    @Args('userId') userId: number,
+    @Args('userGroupId') userGroupId: number
+  ): Promise<String> {
+    await this.userService.removeFromUserGroup(userId, userGroupId);
     return `Removed user from user group.`;
   }
 }
