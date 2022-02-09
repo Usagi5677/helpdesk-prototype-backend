@@ -575,7 +575,7 @@ export class TicketService {
       skip: offset,
       take: limitPlusOne,
       where,
-      include: { createdBy: true },
+      include: { createdBy: true, categories: true },
     });
     const count = await this.prisma.ticket.count({ where });
     const { edges, pageInfo } = connectionFromArraySlice(
