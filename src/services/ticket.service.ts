@@ -23,6 +23,7 @@ import emailTemplate from 'src/common/helpers/emailTemplate';
 import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
 import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
 import * as moment from 'moment';
+
 @Injectable()
 export class TicketService {
   constructor(
@@ -128,7 +129,7 @@ export class TicketService {
           createdById: user.id,
           title,
           body,
-          followings: { create: [{ userId: user.id }] },
+          ticketFollowings: { create: [{ userId: user.id }] },
         },
       });
     } catch (e) {
@@ -524,7 +525,7 @@ export class TicketService {
       search,
       status,
       createdById,
-      categoryId,
+      categoryIds,
       priority,
       self,
       from,
@@ -546,8 +547,10 @@ export class TicketService {
     if (status) {
       where.AND.push({ status });
     }
-    if (categoryId) {
-      where.AND.push({ categories: { some: { id: categoryId } } });
+    if (categoryIds && categoryIds.length > 0) {
+      where.AND.push({
+        ticketCategories: { some: { categoryId: { in: categoryIds } } },
+      });
     }
     if (priority) {
       where.AND.push({ priority });
@@ -575,11 +578,26 @@ export class TicketService {
       skip: offset,
       take: limitPlusOne,
       where,
-      include: { createdBy: true, categories: true },
+      include: {
+        createdBy: true,
+        ticketCategories: { include: { category: true } },
+        ticketAssignments: { include: { user: true } },
+      },
     });
+
+    // Mapping from many to many relationship to a more readable gql form
+    const ticketsResp: Ticket[] = [];
+    tickets.forEach((ticket) => {
+      const ticketResp = new Ticket();
+      Object.assign(ticketResp, ticket);
+      ticketResp.categories = ticket.ticketCategories.map((tc) => tc.category);
+      ticketResp.agents = ticket.ticketAssignments.map((ta) => ta.user);
+      ticketsResp.push(ticketResp);
+    });
+
     const count = await this.prisma.ticket.count({ where });
     const { edges, pageInfo } = connectionFromArraySlice(
-      tickets.slice(0, limit),
+      ticketsResp.slice(0, limit),
       args,
       {
         arrayLength: count,

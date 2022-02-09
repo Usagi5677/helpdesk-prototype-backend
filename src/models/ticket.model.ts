@@ -16,4 +16,5 @@ export class Ticket extends BaseModel {
   started: boolean;
   priority?: Priority;
   categories: Category[];
+  agents: User[];
 }

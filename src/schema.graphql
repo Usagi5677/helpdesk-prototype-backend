@@ -132,7 +132,7 @@ type Query {
 
     """Paginate before opaque cursor"""
     before: String
-    categoryId: Int
+    categoryIds: [Int!]
     createdById: Int
 
     """Paginate first"""
@@ -152,7 +152,6 @@ type Query {
   redisGet(key: String!): String
   redisKeys: [String!]!
   searchAPSUsers(query: String!): [User!]!
-  searchCategory(name: String!): [Category!]!
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(query: String!): [SearchResult!]!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
@@ -162,7 +161,7 @@ type Query {
 
     """Paginate before opaque cursor"""
     before: String
-    categoryId: Int
+    categoryIds: [Int!]
     createdById: Int
 
     """Paginate first"""
@@ -217,6 +216,7 @@ enum Status {
 }
 
 type Ticket {
+  agents: [User!]!
   body: String
   categories: [Category!]!
 

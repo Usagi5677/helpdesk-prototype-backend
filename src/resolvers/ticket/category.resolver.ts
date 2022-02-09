@@ -37,15 +37,8 @@ export class CategoryResolver {
     return `Category deleted.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Query(() => PaginatedCategory)
   async categories(@Args() args: CategoryConnectionArgs) {
     return await this.ticketService.getCategoriesWithPagination(args);
-  }
-
-  @Roles('Admin', 'Agent')
-  @Query(() => [Category])
-  async searchCategory(@Args('name') name: string) {
-    return await this.ticketService.searchCategories(name);
   }
 }

@@ -98,23 +98,23 @@ model UserGroupUser {
 }
 
 model Ticket {
-  id             Int                @id @default(autoincrement())
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  createdById    Int
-  createdBy      User               @relation(fields: [createdById], references: [id])
-  status         TicketStatus       @default(Pending)
-  title          String
-  body           String?
-  rating         Int?
-  feedback       String?
-  priority       Priority?
-  categories     TicketCategory[]
-  assignments    TicketAssignment[]
-  checklistItems ChecklistItem[]
-  followings     TicketFollowing[]
-  comments       TicketComment[]
-  attachments    TicketAttachment[]
+  id                Int                @id @default(autoincrement())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdById       Int
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  status            TicketStatus       @default(Pending)
+  title             String
+  body              String?
+  rating            Int?
+  feedback          String?
+  priority          Priority?
+  ticketCategories  TicketCategory[]
+  ticketAssignments TicketAssignment[]
+  checklistItems    ChecklistItem[]
+  ticketFollowings  TicketFollowing[]
+  comments          TicketComment[]
+  attachments       TicketAttachment[]
 }
 
 enum TicketStatus {

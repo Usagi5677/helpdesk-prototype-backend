@@ -98,10 +98,10 @@ Table Ticket {
   rating Int
   feedback String
   priority Priority
-  categories TicketCategory [not null]
-  assignments TicketAssignment [not null]
+  ticketCategories TicketCategory [not null]
+  ticketAssignments TicketAssignment [not null]
   checklistItems ChecklistItem [not null]
-  followings TicketFollowing [not null]
+  ticketFollowings TicketFollowing [not null]
   comments TicketComment [not null]
   attachments TicketAttachment [not null]
 }

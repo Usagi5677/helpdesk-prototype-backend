@@ -220,68 +220,34 @@ export class UserService {
     user: User,
     query: string
   ): Promise<SearchResult[]> {
-    let take = 10;
     const contains = query.trim();
-    const isRCNO = /^-?\d+$/.test(contains);
     let searchResults: SearchResult[] = [];
-    let users: User[] = [];
+    let users = await this.apsService.searchAPS(contains);
 
-    // If search query is just a number, search user rcno only
-    if (isRCNO) {
-      let findingUser = await this.redisCacheService.get(`rcno-${contains}`);
-      if (!findingUser) {
-        findingUser = await this.prisma.user.findFirst({
-          where: { rcno: parseInt(contains) },
-        });
-        if (findingUser) {
-          await this.redisCacheService.setForMonth(
-            `rcno-${contains}`,
-            findingUser
-          );
-        }
-      }
-      if (findingUser) users.push(findingUser);
-    }
-
-    // Otherwise search both users and user groups by name
-    else {
-      const where: any = {
-        AND: [{ name: { contains, mode: 'insensitive' } }],
-      };
-      // Only these roles can see all user groups
-      const isAdminOrAgent = await this.isAdminOrAgent(user.id);
-      if (!isAdminOrAgent) {
-        // Otherwise show only public groups
-        where.AND.push({
-          mode: 'Public',
-        });
-      }
-      const userGroups = await this.prisma.userGroup.findMany({
-        where,
-        take: Math.floor(take / 2),
-      });
-
-      // Map each user group to search results
-      userGroups.forEach((group) => {
-        const searchResult = new SearchResult();
-        searchResult.name = group.name;
-        searchResult.type = 'UserGroup';
-        searchResult.userGroup = group;
-        searchResults.push(searchResult);
-      });
-
-      // If there are less results for user groups than half of the take limit,
-      // remaining amount is added to take limit for user result
-      if (userGroups.length <= Math.floor(take / 2)) {
-        take -= userGroups.length;
-      } else {
-        take = Math.floor(take / 2);
-      }
-      users = await this.prisma.user.findMany({
-        where: { fullName: { contains, mode: 'insensitive' } },
-        take: take,
+    const where: any = {
+      AND: [{ name: { contains, mode: 'insensitive' } }],
+    };
+    // Only these roles can see all user groups
+    const isAdminOrAgent = await this.isAdminOrAgent(user.id);
+    if (!isAdminOrAgent) {
+      // Otherwise show only public groups
+      where.AND.push({
+        mode: 'Public',
       });
     }
+    const userGroups = await this.prisma.userGroup.findMany({
+      where,
+      take: 5,
+    });
+
+    // Map each user group to search results
+    userGroups.forEach((group) => {
+      const searchResult = new SearchResult();
+      searchResult.name = group.name;
+      searchResult.type = 'UserGroup';
+      searchResult.userGroup = group;
+      searchResults.push(searchResult);
+    });
 
     // Map each user to search results
     users.forEach((user) => {
