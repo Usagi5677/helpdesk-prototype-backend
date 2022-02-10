@@ -125,6 +125,7 @@ type Query {
     last: Int
     name: String
   ): PaginatedCategory!
+  hasTicketAccess(ticketId: Int!): Boolean!
   me: UserWithRoles!
   myTickets(
     """Paginate after opaque cursor"""
@@ -154,6 +155,7 @@ type Query {
   searchAPSUsers(query: String!): [User!]!
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(query: String!): [SearchResult!]!
+  ticket(ticketId: Int!): Boolean!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
   tickets(
     """Paginate after opaque cursor"""
@@ -224,6 +226,7 @@ type Ticket {
   createdAt: Date!
   createdBy: User!
   feedback: String!
+  followers: [User!]!
   id: Int!
   priority: Priority
   rating: Int!

@@ -614,4 +614,50 @@ export class TicketService {
       },
     };
   }
+
+  async hasTicketAccess(user: User, ticketId: number) {
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+      include: { ticketFollowings: true },
+    });
+    if (!ticket) return false;
+    const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
+    if (
+      isAdminOrAgent ||
+      ticket.createdById === user.id ||
+      ticket.ticketFollowings.map((tf) => tf.userId).includes(user.id)
+    )
+      return true;
+    return false;
+  }
+
+  async ticket(user: User, ticketId: number): Promise<Ticket> {
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+      include: {
+        createdBy: true,
+        ticketCategories: { include: { category: true } },
+        ticketAssignments: { include: { user: true } },
+        checklistItems: true,
+        ticketFollowings: { include: { user: true } },
+        comments: true,
+        attachments: true,
+      },
+    });
+    if (!ticket) throw new BadRequestException('Ticket not found.');
+    const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
+    if (
+      !isAdminOrAgent &&
+      ticket.createdById !== user.id &&
+      !ticket.ticketFollowings.map((tf) => tf.userId).includes(user.id)
+    ) {
+      throw new UnauthorizedException('You do not have access to this ticket.');
+    }
+    const ticketResp = new Ticket();
+    Object.assign(ticketResp, ticket);
+    ticketResp.categories = ticket.ticketCategories.map((tc) => tc.category);
+    ticketResp.agents = ticket.ticketAssignments.map((ta) => ta.user);
+    ticketResp.followers = ticket.ticketFollowings.map((tf) => tf.user);
+    return ticketResp;
+  }
 }

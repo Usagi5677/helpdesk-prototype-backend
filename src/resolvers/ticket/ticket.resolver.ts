@@ -192,4 +192,17 @@ export class TicketResolver {
     args.self = false;
     return await this.ticketService.getTicketsWithPagination(user, args);
   }
+
+  @Query(() => Boolean)
+  async hasTicketAccess(
+    @UserEntity() user: User,
+    @Args('ticketId') ticketId: number
+  ) {
+    return await this.ticketService.hasTicketAccess(user, ticketId);
+  }
+
+  @Query(() => Boolean)
+  async ticket(@UserEntity() user: User, @Args('ticketId') ticketId: number) {
+    return await this.ticketService.ticket(user, ticketId);
+  }
 }
