@@ -660,4 +660,28 @@ export class TicketService {
     ticketResp.followers = ticket.ticketFollowings.map((tf) => tf.user);
     return ticketResp;
   }
+
+  async isAssignedToTicket(userId: number, ticketId: number): Promise<boolean> {
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+      include: {
+        ticketAssignments: true,
+      },
+    });
+    if (!ticket) return false;
+    if (ticket.ticketAssignments.map((ta) => ta.userId).includes(userId))
+      return true;
+    return false;
+  }
+
+  async isAdminOrAssignedToTicket(
+    userId: number,
+    ticketId: number
+  ): Promise<boolean> {
+    const isAdmin = await this.userService.isAdmin(userId);
+    if (isAdmin) return true;
+    const isAssigned = await this.isAssignedToTicket(userId, ticketId);
+    if (isAssigned) return true;
+    return false;
+  }
 }

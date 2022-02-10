@@ -33,6 +33,7 @@ type Mutation {
   addChecklistItem(description: String!, ticketId: Int!): String!
   addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
   addFollower(newFollowerId: Int!, ticketId: Int!): String!
+  addTicketCategory(categoryId: Int!, ticketId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: String!): String!
   assignAgent(agentId: Int!, ticketId: Int!): String!
   changeCategoryName(id: Int!, name: String!): String!
@@ -51,9 +52,10 @@ type Mutation {
   readNotification(notificationId: Int!): Boolean!
   removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
   removeFromUserGroup(userGroupId: Int!, userId: Int!): String!
+  removeTicketCategory(categoryId: Int!, ticketId: Int!): String!
   removeUserRole(role: Role!, userId: Int!): String!
   setOwner(agentId: Int!, ticketId: Int!): String!
-  setTicketPriority(id: Int!, priority: String!): String!
+  setTicketPriority(priority: Priority!, ticketId: Int!): String!
   setTicketStatus(id: Int!, status: String!): String!
   unassignAgent(agentId: Int!, ticketId: Int!): String!
   uncompleteChecklistItem(id: Int!): String!
@@ -155,7 +157,7 @@ type Query {
   searchAPSUsers(query: String!): [User!]!
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(query: String!): [SearchResult!]!
-  ticket(ticketId: Int!): Boolean!
+  ticket(ticketId: Int!): Ticket!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
   tickets(
     """Paginate after opaque cursor"""

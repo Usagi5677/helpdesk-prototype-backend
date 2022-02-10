@@ -1,4 +1,8 @@
-import { UseGuards } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { Roles } from 'src/decorators/roles.decorator';
@@ -11,11 +15,16 @@ import { Priority } from 'src/common/enums/priority';
 import { Status } from 'src/common/enums/status';
 import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
 import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
+import { UserService } from 'src/services/user.service';
+import { PrismaService } from 'nestjs-prisma';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
 export class TicketResolver {
-  constructor(private ticketService: TicketService) {}
+  constructor(
+    private ticketService: TicketService,
+    private prisma: PrismaService
+  ) {}
 
   @Mutation(() => String)
   async createTicket(
@@ -30,10 +39,10 @@ export class TicketResolver {
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setTicketPriority(
-    @Args('id') id: number,
-    @Args('priority') priority: Priority
+    @Args('ticketId') ticketId: number,
+    @Args('priority', { type: () => Priority }) priority: Priority
   ): Promise<String> {
-    await this.ticketService.setTicketPriority(id, priority);
+    await this.ticketService.setTicketPriority(ticketId, priority);
     return `Ticket priority set to ${priority}.`;
   }
 
@@ -201,8 +210,53 @@ export class TicketResolver {
     return await this.ticketService.hasTicketAccess(user, ticketId);
   }
 
-  @Query(() => Boolean)
-  async ticket(@UserEntity() user: User, @Args('ticketId') ticketId: number) {
+  @Query(() => Ticket)
+  async ticket(
+    @UserEntity() user: User,
+    @Args('ticketId') ticketId: number
+  ): Promise<Ticket> {
     return await this.ticketService.ticket(user, ticketId);
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async addTicketCategory(
+    @UserEntity() user: User,
+    @Args('ticketId') ticketId: number,
+    @Args('categoryId') categoryId: number
+  ): Promise<String> {
+    const isAdminOrAssigned =
+      await this.ticketService.isAdminOrAssignedToTicket(user.id, ticketId);
+    if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
+    try {
+      await this.prisma.ticketCategory.create({
+        data: { ticketId, categoryId },
+      });
+      return `Category added to ticket.`;
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async removeTicketCategory(
+    @UserEntity() user: User,
+    @Args('ticketId') ticketId: number,
+    @Args('categoryId') categoryId: number
+  ): Promise<String> {
+    const isAdminOrAssigned =
+      await this.ticketService.isAdminOrAssignedToTicket(user.id, ticketId);
+    if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
+    try {
+      await this.prisma.ticketCategory.deleteMany({
+        where: { ticketId, categoryId },
+      });
+      return `Category removed from ticket.`;
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
   }
 }
