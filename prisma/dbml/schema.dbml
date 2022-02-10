@@ -11,7 +11,7 @@ Table User {
   fullName String [not null]
   email String [not null]
   notifications Notification [not null]
-  knowledgeBaseEntries KnowledgeBaseEntry [not null]
+  informations Information [not null]
   roles UserRole [not null]
   userGroupUsers UserGroupUser [not null]
   ticketsCreated Ticket [not null]
@@ -31,22 +31,15 @@ Table Notification {
   readAt DateTime
 }
 
-Table KnowledgeBase {
-  id Int [pk, increment]
-  mode String [not null]
-  name String [not null]
-  entries KnowledgeBaseEntry [not null]
-}
-
-Table KnowledgeBaseEntry {
+Table Information {
   id Int [pk, increment]
   createdAt DateTime [default: `now()`, not null]
-  userId Int [not null]
-  user User [not null]
-  knowledgeBaseId Int [not null]
-  knowledgeBase KnowledgeBase [not null]
+  updatedAt DateTime [not null]
+  createdById Int [not null]
+  createdBy User [not null]
+  mode String [not null]
+  title String [not null]
   body String [not null]
-  current Boolean [not null]
 }
 
 Table UserRole {
@@ -214,9 +207,7 @@ Enum Priority {
 
 Ref: Notification.userId > User.id
 
-Ref: KnowledgeBaseEntry.userId > User.id
-
-Ref: KnowledgeBaseEntry.knowledgeBaseId > KnowledgeBase.id
+Ref: Information.createdById > User.id
 
 Ref: UserRole.userId > User.id
 
