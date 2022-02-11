@@ -15,8 +15,9 @@ export class SearchResolver {
   @Query(() => [SearchResult])
   async searchUsersAndGroups(
     @UserEntity() user: User,
-    @Args('query') query: string
+    @Args('query') query: string,
+    @Args('onlyAgents') onlyAgents: boolean
   ) {
-    return await this.userService.searchUserAndGroups(user, query);
+    return await this.userService.searchUserAndGroups(user, query, onlyAgents);
   }
 }

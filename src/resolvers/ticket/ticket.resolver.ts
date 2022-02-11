@@ -3,7 +3,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
@@ -98,13 +98,15 @@ export class TicketResolver {
 
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
-  async assignAgent(
+  async assignAgents(
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
-    @Args('agentId') agentId: number
+    @Args('agentIds', { type: () => [Int] }) agentIds: number[]
   ): Promise<String> {
-    await this.ticketService.assignAgent(user, ticketId, agentId);
-    return `Successfully assigned agent to ticket.`;
+    await this.ticketService.assignAgents(user, ticketId, agentIds);
+    return `Successfully assigned agent${
+      agentIds.length > 1 ? 's' : ''
+    } to ticket.`;
   }
 
   @Roles('Admin')

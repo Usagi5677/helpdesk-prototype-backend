@@ -282,30 +282,38 @@ export class TicketService {
   }
 
   //** Assign agent to ticket. */
-  async assignAgent(user: User, ticketId: number, agentId: number) {
+  async assignAgents(user: User, ticketId: number, agentIds: number[]) {
     const isAdmin = await this.userService.isAdmin(user.id);
     // Agents can only assign themselves to ticket.
     if (!isAdmin) {
-      if (user.id !== agentId) {
+      if (agentIds.includes(user.id)) {
         throw new UnauthorizedException(
           'Agents cannot assign other agents to ticket.'
         );
       }
     }
-    // Check if the user being assigned is an agent.
-    const isAgent = await this.userService.isAgent(agentId);
-    if (!isAgent) {
-      throw new BadRequestException(`User is not an agent.`);
+
+    // Check if the users being assigned are agents.
+    for (const agentId of agentIds) {
+      const isAgent = await this.userService.isAgent(agentId);
+      if (!isAgent) {
+        throw new BadRequestException(`User is not an agent.`);
+      }
     }
-    // Check current assignments to ticket to see if owner exists. If not, this
-    // agent will be assigned as owner.
+
+    // Check current assignments to ticket to see if owner exists. If not, the
+    // first agent will be assigned as owner.
     const ticketAssignments = await this.prisma.ticketAssignment.findMany({
       where: { ticketId },
     });
     const ownerExists = ticketAssignments.some((ta) => ta.isOwner);
     try {
-      await this.prisma.ticketAssignment.create({
-        data: { ticketId, userId: agentId, isOwner: !ownerExists },
+      await this.prisma.ticketAssignment.createMany({
+        data: agentIds.map((agentId, index) => ({
+          ticketId,
+          userId: agentId,
+          isOwner: ownerExists ? false : index === 0 ? true : false,
+        })),
       });
     } catch (e) {
       if (

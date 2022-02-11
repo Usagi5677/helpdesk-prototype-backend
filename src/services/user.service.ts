@@ -218,15 +218,32 @@ export class UserService {
   //** Searches users and user groups */
   async searchUserAndGroups(
     user: User,
-    query: string
+    query: string,
+    onlyAgents?: boolean
   ): Promise<SearchResult[]> {
     const contains = query.trim();
     let searchResults: SearchResult[] = [];
-    let users = await this.apsService.searchAPS(contains);
+    let users: User[] = [];
+    if (onlyAgents) {
+      users = await this.prisma.user.findMany({
+        where: {
+          fullName: { contains, mode: 'insensitive' },
+          roles: { some: { role: { in: ['Agent'] } } },
+        },
+      });
+    } else {
+      users = await this.apsService.searchAPS(contains);
+    }
 
     const where: any = {
       AND: [{ name: { contains, mode: 'insensitive' } }],
     };
+    if (onlyAgents)
+      where.AND.push({
+        userGroupUsers: {
+          every: { user: { roles: { some: { role: 'Agent' } } } },
+        },
+      });
     // Only these roles can see all user groups
     const isAdminOrAgent = await this.isAdminOrAgent(user.id);
     if (!isAdminOrAgent) {
@@ -238,15 +255,21 @@ export class UserService {
     const userGroups = await this.prisma.userGroup.findMany({
       where,
       take: 5,
+      include: { userGroupUsers: { include: { user: true } } },
     });
 
     // Map each user group to search results
     userGroups.forEach((group) => {
-      const searchResult = new SearchResult();
-      searchResult.name = group.name;
-      searchResult.type = 'UserGroup';
-      searchResult.userGroup = group;
-      searchResults.push(searchResult);
+      if (group.userGroupUsers.length > 0) {
+        const searchResult = new SearchResult();
+        searchResult.name = group.name;
+        searchResult.type = 'UserGroup';
+        searchResult.userGroup = group;
+        searchResult.userGroup.users = group.userGroupUsers.map(
+          (ugu) => ugu.user
+        );
+        searchResults.push(searchResult);
+      }
     });
 
     // Map each user to search results

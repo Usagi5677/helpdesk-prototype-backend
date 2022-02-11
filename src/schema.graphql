@@ -35,7 +35,7 @@ type Mutation {
   addFollower(newFollowerId: Int!, ticketId: Int!): String!
   addTicketCategory(categoryId: Int!, ticketId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: String!): String!
-  assignAgent(agentId: Int!, ticketId: Int!): String!
+  assignAgents(agentIds: [Int!]!, ticketId: Int!): String!
   changeCategoryName(id: Int!, name: String!): String!
   completeChecklistItem(id: Int!): String!
   createCategory(name: String!): String!
@@ -156,7 +156,7 @@ type Query {
   redisKeys: [String!]!
   searchAPSUsers(query: String!): [User!]!
   searchUser(query: String!): [User!]!
-  searchUsersAndGroups(query: String!): [SearchResult!]!
+  searchUsersAndGroups(onlyAgents: Boolean!, query: String!): [SearchResult!]!
   ticket(ticketId: Int!): Ticket!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
   tickets(
