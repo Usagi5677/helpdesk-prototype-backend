@@ -192,11 +192,7 @@ export class TicketService {
   }
 
   //** Add follower to ticket. */
-  async addFollower(
-    user: User,
-    ticketId: number,
-    newFollowerId: number
-  ): Promise<User> {
+  async addFollower(user: User, ticketId: number, newFollowerUserId: string) {
     const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
@@ -206,36 +202,35 @@ export class TicketService {
         throw new UnauthorizedException('Not authorized to add followers.');
       }
     }
-    const newFollower = await this.prisma.user.findFirst({
-      where: { id: newFollowerId },
-    });
+    const [newFollower, _] = await this.userService.createIfNotExists(
+      newFollowerUserId
+    );
     if (!newFollower) {
       throw new BadRequestException('Invalid user.');
     }
     try {
       await this.prisma.ticketFollowing.create({
-        data: { ticketId, userId: newFollowerId },
+        data: { ticketId, userId: newFollower.id },
       });
-      const body = `${user.fullName} has added you to a ticket.`;
-      await this.notificationService.createInBackground(
-        {
-          userId: newFollowerId,
-          body,
-        },
-        {
-          to: [newFollower.email],
-          subject: `Added to ticket`,
-          html: emailTemplate({
-            text: body,
-            // extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
-            // callToAction: {
-            //   link: `${process.env.APP_URL}/cases/${docOnCase.case.id}/#documents`,
-            //   title: 'View Case Documents',
-            // },
-          }),
-        }
-      );
-      return newFollower;
+      // const body = `${user.fullName} has added you to a ticket.`;
+      // await this.notificationService.createInBackground(
+      //   {
+      //     userId: newFollower.id,
+      //     body,
+      //   },
+      //   {
+      //     to: [newFollower.email],
+      //     subject: `Added to ticket`,
+      //     html: emailTemplate({
+      //       text: body,
+      //       // extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
+      //       // callToAction: {
+      //       //   link: `${process.env.APP_URL}/cases/${docOnCase.case.id}/#documents`,
+      //       //   title: 'View Case Documents',
+      //       // },
+      //     }),
+      //   }
+      // );
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -664,7 +659,10 @@ export class TicketService {
     const ticketResp = new Ticket();
     Object.assign(ticketResp, ticket);
     ticketResp.categories = ticket.ticketCategories.map((tc) => tc.category);
-    ticketResp.agents = ticket.ticketAssignments.map((ta) => ta.user);
+    ticketResp.agents = ticket.ticketAssignments
+      .sort((ta) => (ta.isOwner ? -1 : 1))
+      .map((ta) => ta.user);
+    ticketResp.ownerId = ticket.ticketAssignments.find((a) => a.isOwner).userId;
     ticketResp.followers = ticket.ticketFollowings.map((tf) => tf.user);
     return ticketResp;
   }

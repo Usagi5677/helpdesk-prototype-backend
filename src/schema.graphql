@@ -32,7 +32,7 @@ type Mutation {
   addAppUser(roles: [Role!]!, userId: String!): String!
   addChecklistItem(description: String!, ticketId: Int!): String!
   addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
-  addFollower(newFollowerId: Int!, ticketId: Int!): String!
+  addFollower(newFollowerUserId: String!, ticketId: Int!): String!
   addTicketCategory(categoryId: Int!, ticketId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: String!): String!
   assignAgents(agentIds: [Int!]!, ticketId: Int!): String!
@@ -230,6 +230,7 @@ type Ticket {
   feedback: String!
   followers: [User!]!
   id: Int!
+  ownerId: Int
   priority: Priority
   rating: Int!
   started: Boolean!
