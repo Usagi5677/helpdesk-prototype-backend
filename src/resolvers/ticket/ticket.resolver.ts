@@ -76,14 +76,10 @@ export class TicketResolver {
   async addFollower(
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
-    @Args('newFollowerId') newFollowerId: number
+    @Args('newFollowerUserId') newFollowerUserId: string
   ): Promise<String> {
-    const newFollower = await this.ticketService.addFollower(
-      user,
-      ticketId,
-      newFollowerId
-    );
-    return `Successfully added ${newFollower.fullName} to ticket.`;
+    await this.ticketService.addFollower(user, ticketId, newFollowerUserId);
+    return `Successfully added follower to ticket.`;
   }
 
   @Mutation(() => String)
@@ -133,44 +129,43 @@ export class TicketResolver {
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async addChecklistItem(
+    @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('description') description: string
   ): Promise<String> {
-    await this.ticketService.createChecklistItem(ticketId, description);
+    await this.ticketService.createChecklistItem(user, ticketId, description);
     return `Added checklist item to ticket.`;
   }
 
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async editChecklistItem(
+    @UserEntity() user: User,
     @Args('id') id: number,
     @Args('description') description: string
   ): Promise<String> {
-    await this.ticketService.editChecklistItem(id, description);
+    await this.ticketService.editChecklistItem(user, id, description);
     return `Checklist item updated.`;
   }
 
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
-  async completeChecklistItem(
+  async toggleChecklistItem(
+    @UserEntity() user: User,
+    @Args('id') id: number,
+    @Args('complete') complete: boolean
+  ): Promise<String> {
+    await this.ticketService.toggleChecklistItem(user, id, complete);
+    return `Checklist item updated.`;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async deleteChecklistItem(
     @UserEntity() user: User,
     @Args('id') id: number
   ): Promise<String> {
-    await this.ticketService.completeChecklistItem(user, id);
-    return `Checklist item marked as complete.`;
-  }
-
-  @Roles('Admin', 'Agent')
-  @Mutation(() => String)
-  async uncompleteChecklistItem(@Args('id') id: number): Promise<String> {
-    await this.ticketService.uncompleteChecklistItem(id);
-    return `Checklist item marked as not complete.`;
-  }
-
-  @Roles('Admin', 'Agent')
-  @Mutation(() => String)
-  async deleteChecklistItem(@Args('id') id: number): Promise<String> {
-    await this.ticketService.deleteChecklistItem(id);
+    await this.ticketService.deleteChecklistItem(user, id);
     return `Checklist item deleted.`;
   }
 

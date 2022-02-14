@@ -25,6 +25,19 @@ type CategoryPageInfo {
   startCursor: String
 }
 
+type ChecklistItem {
+  completedAt: Date
+  completedBy: User
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  description: String!
+  id: Int!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+}
+
 """Date custom scalar type"""
 scalar Date
 
@@ -59,12 +72,11 @@ type Mutation {
   addAppUser(roles: [Role!]!, userId: String!): String!
   addChecklistItem(description: String!, ticketId: Int!): String!
   addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
-  addFollower(newFollowerId: Int!, ticketId: Int!): String!
+  addFollower(newFollowerUserId: String!, ticketId: Int!): String!
   addTicketCategory(categoryId: Int!, ticketId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: String!): String!
   assignAgents(agentIds: [Int!]!, ticketId: Int!): String!
   changeCategoryName(id: Int!, name: String!): String!
-  completeChecklistItem(id: Int!): String!
   createCategory(name: String!): String!
   createKnowledgebase(body: String!, mode: String!, title: String!): String!
   createTicket(body: String!, title: String!): String!
@@ -86,8 +98,8 @@ type Mutation {
   setOwner(agentId: Int!, ticketId: Int!): String!
   setTicketPriority(priority: Priority!, ticketId: Int!): String!
   setTicketStatus(id: Int!, status: String!): String!
+  toggleChecklistItem(complete: Boolean!, id: Int!): String!
   unassignAgent(agentId: Int!, ticketId: Int!): String!
-  uncompleteChecklistItem(id: Int!): String!
 }
 
 type Notification {
@@ -273,6 +285,7 @@ type Ticket {
   agents: [User!]!
   body: String
   categories: [Category!]!
+  checklistItems: [ChecklistItem!]!
 
   """Identifies the date and time when the object was created."""
   createdAt: Date!
@@ -280,6 +293,7 @@ type Ticket {
   feedback: String!
   followers: [User!]!
   id: Int!
+  ownerId: Int
   priority: Priority
   rating: Int!
   started: Boolean!

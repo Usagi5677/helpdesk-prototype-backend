@@ -50,6 +50,8 @@ export class NotificationService {
   async sendEmail(options: SendMailOptions) {
     const to = [...((options.to as any[]) ?? [])];
 
+    // Don't send email for now
+    return;
     if (to.length > 0) {
       await this.transporter.sendMail({
         ...options,
