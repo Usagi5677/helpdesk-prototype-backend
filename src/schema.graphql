@@ -85,6 +85,7 @@ type Mutation {
   deleteChecklistItem(id: Int!): String!
   deleteUserGroup(id: Int!): String!
   editChecklistItem(description: String!, id: Int!): String!
+  editKnowledgebase(body: String!, id: Int!, mode: String!, title: String!): String!
   editUserGroup(id: Int!, mode: String!, name: String!): String!
   flushRedis: String!
   giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!

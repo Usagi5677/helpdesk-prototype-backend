@@ -79,4 +79,16 @@ export class KnowledgebaseResolver {
       throw new InternalServerErrorException('Unexpected error occured.');
     }
   }
+
+  @Roles('Admin', 'Agent')
+  @Mutation(() => String)
+  async editKnowledgebase(
+    @Args('id') id: number,
+    @Args('title') title: string,
+    @Args('body') body: string,
+    @Args('mode') mode: string
+  ): Promise<String> {
+    await this.knowledgebaseService.changeKnowledgebase(id, title, body, mode);
+    return `Knowledge base updated.`;
+  }
 }
