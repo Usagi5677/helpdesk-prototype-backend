@@ -400,7 +400,12 @@ export class TicketService {
   }
 
   //** Create checklist item. */
-  async createChecklistItem(ticketId: number, description: string) {
+  async createChecklistItem(user: User, ticketId: number, description: string) {
+    const isAdminOrAssigned = await this.isAdminOrAssignedToTicket(
+      user.id,
+      ticketId
+    );
+    if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
     try {
       await this.prisma.checklistItem.create({
         data: { ticketId, description },
@@ -412,7 +417,15 @@ export class TicketService {
   }
 
   //** Edit checklist item. */
-  async editChecklistItem(id: number, description: string) {
+  async editChecklistItem(user: User, id: number, description: string) {
+    const checkListItem = await this.prisma.checklistItem.findFirst({
+      where: { id },
+    });
+    const isAdminOrAssigned = await this.isAdminOrAssignedToTicket(
+      user.id,
+      checkListItem.ticketId
+    );
+    if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
     try {
       await this.prisma.checklistItem.update({
         where: { id },
@@ -424,25 +437,22 @@ export class TicketService {
     }
   }
 
-  //** Complete checklist item. */
-  async completeChecklistItem(user: User, id: number) {
+  //** Set checklist item as complete or incomplete. */
+  async toggleChecklistItem(user: User, id: number, complete: boolean) {
+    const checkListItem = await this.prisma.checklistItem.findFirst({
+      where: { id },
+    });
+    const isAdminOrAssigned = await this.isAdminOrAssignedToTicket(
+      user.id,
+      checkListItem.ticketId
+    );
+    if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
     try {
       await this.prisma.checklistItem.update({
         where: { id },
-        data: { completedById: user.id, completedAt: new Date() },
-      });
-    } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
-    }
-  }
-
-  //** Uncomplete checklist item. */
-  async uncompleteChecklistItem(id: number) {
-    try {
-      await this.prisma.checklistItem.update({
-        where: { id },
-        data: { completedById: null, completedAt: null },
+        data: complete
+          ? { completedById: user.id, completedAt: new Date() }
+          : { completedById: null, completedAt: null },
       });
     } catch (e) {
       console.log(e);
@@ -451,7 +461,15 @@ export class TicketService {
   }
 
   //** Delete checklist item. */
-  async deleteChecklistItem(id: number) {
+  async deleteChecklistItem(user: User, id: number) {
+    const checkListItem = await this.prisma.checklistItem.findFirst({
+      where: { id },
+    });
+    const isAdminOrAssigned = await this.isAdminOrAssignedToTicket(
+      user.id,
+      checkListItem.ticketId
+    );
+    if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
     try {
       await this.prisma.checklistItem.delete({
         where: { id },
@@ -585,6 +603,7 @@ export class TicketService {
         createdBy: true,
         ticketCategories: { include: { category: true } },
         ticketAssignments: { include: { user: true } },
+        checklistItems: { orderBy: { id: 'asc' } },
       },
     });
 
@@ -641,7 +660,7 @@ export class TicketService {
         createdBy: true,
         ticketCategories: { include: { category: true } },
         ticketAssignments: { include: { user: true } },
-        checklistItems: true,
+        checklistItems: { orderBy: { id: 'asc' } },
         ticketFollowings: { include: { user: true } },
         comments: true,
         attachments: true,
