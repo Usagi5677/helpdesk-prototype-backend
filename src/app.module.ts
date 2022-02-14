@@ -13,6 +13,7 @@ import { PrismaModule } from 'nestjs-prisma';
 import { TicketModule } from './resolvers/ticket/ticket.module';
 import { AttachmentModule } from './resolvers/attachment/attachment.module';
 import { BullModule } from '@nestjs/bull';
+import { KnowledgebaseModule } from './resolvers/knowledgebase/knowledgebase.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { BullModule } from '@nestjs/bull';
     UserModule,
     TicketModule,
     AttachmentModule,
+    KnowledgebaseModule,
   ],
   controllers: [AppController],
   providers: [AppService, AppResolver, DateScalar],

@@ -28,6 +28,33 @@ type CategoryPageInfo {
 """Date custom scalar type"""
 scalar Date
 
+type Knowledgebase {
+  body: String!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  createdBy: User!
+  id: Int!
+  mode: String!
+  title: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+}
+
+type KnowledgebaseEdge {
+  cursor: String
+  node: Knowledgebase
+}
+
+type KnowledgebasePageInfo {
+  count: Int!
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
 type Mutation {
   addAppUser(roles: [Role!]!, userId: String!): String!
   addChecklistItem(description: String!, ticketId: Int!): String!
@@ -39,6 +66,7 @@ type Mutation {
   changeCategoryName(id: Int!, name: String!): String!
   completeChecklistItem(id: Int!): String!
   createCategory(name: String!): String!
+  createKnowledgebase(body: String!, mode: String!, title: String!): String!
   createTicket(body: String!, title: String!): String!
   createUserGroup(mode: String!, name: String!): String!
   deleteCategory(id: Int!): String!
@@ -52,6 +80,7 @@ type Mutation {
   readNotification(notificationId: Int!): Boolean!
   removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
   removeFromUserGroup(userGroupId: Int!, userId: Int!): String!
+  removeKnowledgebase(knowledgebaseId: Int!): String!
   removeTicketCategory(categoryId: Int!, ticketId: Int!): String!
   removeUserRole(role: Role!, userId: Int!): String!
   setOwner(agentId: Int!, ticketId: Int!): String!
@@ -77,6 +106,11 @@ type Notification {
 type PaginatedCategory {
   edges: [CategoryEdge!]
   pageInfo: CategoryPageInfo
+}
+
+type PaginatedKnowledgebase {
+  edges: [KnowledgebaseEdge!]
+  pageInfo: KnowledgebasePageInfo
 }
 
 type PaginatedTickets {
@@ -127,6 +161,21 @@ type Query {
     last: Int
     name: String
   ): PaginatedCategory!
+  getAllKnowledgebase(
+    """Paginate after opaque cursor"""
+    after: String
+
+    """Paginate before opaque cursor"""
+    before: String
+    createdById: Int
+
+    """Paginate first"""
+    first: Int
+
+    """Paginate last"""
+    last: Int
+    search: String
+  ): PaginatedKnowledgebase!
   hasTicketAccess(ticketId: Int!): Boolean!
   me: UserWithRoles!
   myTickets(
@@ -157,6 +206,7 @@ type Query {
   searchAPSUsers(query: String!): [User!]!
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(onlyAgents: Boolean!, query: String!): [SearchResult!]!
+  singleKnowledgebase(knowledgebaseId: Int!): Knowledgebase!
   ticket(ticketId: Int!): Ticket!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
   tickets(
