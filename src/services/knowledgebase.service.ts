@@ -138,6 +138,9 @@ export class KnowledgebaseService {
       skip: offset,
       take: limitPlusOne,
       where,
+      include: {
+        createdBy: true,
+      },
     });
 
     const count = await this.prisma.information.count({ where });
