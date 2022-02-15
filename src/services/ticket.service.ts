@@ -681,7 +681,11 @@ export class TicketService {
     ticketResp.agents = ticket.ticketAssignments
       .sort((ta) => (ta.isOwner ? -1 : 1))
       .map((ta) => ta.user);
-    ticketResp.ownerId = ticket.ticketAssignments.find((a) => a.isOwner).userId;
+    if (ticketResp.agents.length > 0) {
+      ticketResp.ownerId = ticket.ticketAssignments.find(
+        (a) => a.isOwner
+      ).userId;
+    }
     ticketResp.followers = ticket.ticketFollowings.map((tf) => tf.user);
     return ticketResp;
   }
