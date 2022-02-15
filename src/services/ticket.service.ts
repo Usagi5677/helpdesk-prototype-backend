@@ -614,6 +614,11 @@ export class TicketService {
       Object.assign(ticketResp, ticket);
       ticketResp.categories = ticket.ticketCategories.map((tc) => tc.category);
       ticketResp.agents = ticket.ticketAssignments.map((ta) => ta.user);
+      if (ticketResp.agents.length > 0) {
+        ticketResp.ownerId = ticket.ticketAssignments.find(
+          (a) => a.isOwner
+        ).userId;
+      }
       ticketsResp.push(ticketResp);
     });
 
@@ -637,7 +642,7 @@ export class TicketService {
     };
   }
 
-  async hasTicketAccess(user: User, ticketId: number) {
+  async hasTicketAccess(user: User, ticketId: number): Promise<boolean> {
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
       include: { ticketFollowings: true },
@@ -675,6 +680,7 @@ export class TicketService {
     ) {
       throw new UnauthorizedException('You do not have access to this ticket.');
     }
+    // Assigning data from db to the gql shape as it does not match 1:1
     const ticketResp = new Ticket();
     Object.assign(ticketResp, ticket);
     ticketResp.categories = ticket.ticketCategories.map((tc) => tc.category);

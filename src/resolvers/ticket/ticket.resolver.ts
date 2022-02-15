@@ -49,8 +49,8 @@ export class TicketResolver {
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setTicketStatus(
-    @Args('id') id: number,
-    @Args('status') status: Status
+    @Args('ticketId') id: number,
+    @Args('status', { type: () => Status }) status: Status
   ): Promise<String> {
     await this.ticketService.setTicketStatus(id, status);
     return `Ticket status set to ${status}.`;

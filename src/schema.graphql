@@ -98,7 +98,7 @@ type Mutation {
   removeUserRole(role: Role!, userId: Int!): String!
   setOwner(agentId: Int!, ticketId: Int!): String!
   setTicketPriority(priority: Priority!, ticketId: Int!): String!
-  setTicketStatus(id: Int!, status: String!): String!
+  setTicketStatus(status: Status!, ticketId: Int!): String!
   toggleChecklistItem(complete: Boolean!, id: Int!): String!
   unassignAgent(agentId: Int!, ticketId: Int!): String!
 }
