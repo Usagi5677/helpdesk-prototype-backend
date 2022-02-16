@@ -37,6 +37,7 @@ export class CommentResolver {
     return await this.prisma.ticketComment.findMany({
       where: { ticketId },
       include: { user: true },
+      orderBy: { id: 'asc' },
     });
   }
 }
