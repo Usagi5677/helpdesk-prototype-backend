@@ -4,11 +4,12 @@ import { TicketService } from 'src/services/ticket.service';
 import { NotificationModule } from '../notification/notification.module';
 import { UserModule } from '../user/user.module';
 import { CategoryResolver } from './category.resolver';
+import { CommentResolver } from './comment.resolver';
 import { TicketResolver } from './ticket.resolver';
 
 @Module({
   imports: [RedisCacheModule, UserModule, NotificationModule],
-  providers: [CategoryResolver, TicketResolver, TicketService],
+  providers: [CategoryResolver, TicketResolver, CommentResolver, TicketService],
   exports: [TicketService],
 })
 export class TicketModule {}

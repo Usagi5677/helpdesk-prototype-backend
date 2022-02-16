@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, TicketFollowing, User } from '@prisma/client';
+import { Prisma, TicketComment, TicketFollowing, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
 import ConnectionArgs, {
   connectionFromArraySlice,
@@ -23,7 +23,9 @@ import emailTemplate from 'src/common/helpers/emailTemplate';
 import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
 import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
 import * as moment from 'moment';
+import { PubSub } from 'graphql-subscriptions';
 
+export const pubSub = new PubSub();
 @Injectable()
 export class TicketService {
   constructor(
@@ -490,7 +492,7 @@ export class TicketService {
     const [isAdminOrAgent, _] = await this.checkTicketAccess(user.id, ticketId);
     let mode = 'Public';
     if (isAdminOrAgent && isPublic === false) mode = 'Private';
-    this.createComment(user, ticketId, body, mode);
+    await this.createComment(user, ticketId, body, mode);
   }
 
   //** Create comment. Unlike the above function, this function is called within the api. */
@@ -501,14 +503,16 @@ export class TicketService {
     mode: string
   ) {
     try {
-      await this.prisma.ticketComment.create({
+      const comment = await this.prisma.ticketComment.create({
         data: {
           userId: user.id,
           ticketId,
           body,
           mode,
         },
+        include: { user: true },
       });
+      await pubSub.publish('commentCreated', { commentCreated: comment });
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');

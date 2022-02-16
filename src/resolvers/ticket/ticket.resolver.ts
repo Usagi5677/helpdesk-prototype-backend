@@ -15,7 +15,6 @@ import { Priority } from 'src/common/enums/priority';
 import { Status } from 'src/common/enums/status';
 import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
 import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
-import { UserService } from 'src/services/user.service';
 import { PrismaService } from 'nestjs-prisma';
 
 @Resolver(() => Ticket)

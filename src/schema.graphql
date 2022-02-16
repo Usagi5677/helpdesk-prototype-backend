@@ -174,6 +174,7 @@ type Query {
     last: Int
     name: String
   ): PaginatedCategory!
+  comments(ticketId: Int!): [TicketComment!]!
   getAllKnowledgebase(
     """Paginate after opaque cursor"""
     after: String
@@ -282,6 +283,10 @@ enum Status {
   Solved
 }
 
+type Subscription {
+  commentCreated(ticketId: Int!): TicketComment!
+}
+
 type Ticket {
   agents: [User!]!
   body: String
@@ -314,6 +319,19 @@ type TicketAttachment {
   mode: String!
   originalName: String
   sharepointFileName: String
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+  user: User!
+}
+
+type TicketComment {
+  body: String!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  id: Int!
+  mode: String!
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
