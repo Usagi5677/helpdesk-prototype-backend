@@ -34,8 +34,16 @@ export class CommentResolver {
       ticketId
     );
     if (!hasTicketAccess) throw new UnauthorizedException('Unauthorized');
+
+    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+      user.id,
+      ticketId
+    );
+    const where: any = { AND: [{ ticketId }] };
+    if (!isAdminOrAgent) where.AND.push({ mode: 'Public' });
+
     return await this.prisma.ticketComment.findMany({
-      where: { ticketId },
+      where,
       include: { user: true },
       orderBy: { id: 'asc' },
     });

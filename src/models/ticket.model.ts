@@ -21,6 +21,5 @@ export class Ticket extends BaseModel {
   ownerId?: number;
   checklistItems: ChecklistItem[];
   followers: User[];
-  // comments:
   // attachments:
 }
