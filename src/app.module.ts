@@ -1,5 +1,5 @@
 import { GraphQLModule } from '@nestjs/graphql';
-import { Module } from '@nestjs/common';
+import { Module, UnauthorizedException } from '@nestjs/common';
 import { AppController } from './controllers/app.controller';
 import { AppService } from './services/app.service';
 import { AuthModule } from './resolvers/auth/auth.module';
@@ -14,6 +14,7 @@ import { TicketModule } from './resolvers/ticket/ticket.module';
 import { AttachmentModule } from './resolvers/attachment/attachment.module';
 import { BullModule } from '@nestjs/bull';
 import { KnowledgebaseModule } from './resolvers/knowledgebase/knowledgebase.module';
+import jwtDecode from 'jwt-decode';
 
 @Module({
   imports: [
@@ -32,6 +33,19 @@ import { KnowledgebaseModule } from './resolvers/knowledgebase/knowledgebase.mod
           debug: graphqlConfig.debug,
           playground: graphqlConfig.playgroundEnabled,
           context: ({ req }) => ({ req }),
+          subscriptions: {
+            'subscriptions-transport-ws': {
+              onConnect: (connectionParams) => {
+                const authHeader = connectionParams.authToken;
+                if (!authHeader) throw new UnauthorizedException();
+                const token = authHeader.split('Bearer ')[1];
+                if (!token) throw new UnauthorizedException();
+                const decoded = jwtDecode(token);
+                if (!decoded) throw new UnauthorizedException();
+                return decoded;
+              },
+            },
+          },
         };
       },
       inject: [ConfigService],

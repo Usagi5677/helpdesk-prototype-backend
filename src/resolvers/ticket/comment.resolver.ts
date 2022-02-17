@@ -6,21 +6,40 @@ import { UserEntity } from 'src/decorators/user.decorator';
 import { User } from 'src/models/user.model';
 import { PrismaService } from 'nestjs-prisma';
 import { TicketComment } from 'src/models/ticket-comment.model';
+import { AuthService } from 'src/services/auth.service';
 
 @Resolver(() => TicketComment)
 export class CommentResolver {
   constructor(
     private ticketService: TicketService,
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    private authService: AuthService
   ) {}
   @Subscription(() => TicketComment, {
     filter: (payload, variables) => {
       return payload.commentCreated.ticketId === variables.ticketId;
     },
+    async resolve(this, payload, variables, context) {
+      const isAdminOrAgent = await this.hasAccess(
+        context.id,
+        payload.commentCreated.ticketId
+      );
+      if (payload.commentCreated.mode === 'Private' && !isAdminOrAgent) return;
+      return payload.commentCreated;
+    },
   })
-  commentCreated(@Args('ticketId') ticketId: number) {
-    const comment = pubSub.asyncIterator('commentCreated');
-    return comment;
+  async commentCreated(@Args('ticketId') ticketId: number) {
+    return pubSub.asyncIterator('commentCreated');
+  }
+
+  async hasAccess(uuid: string, ticketId: number): Promise<boolean> {
+    const user = await this.authService.validateUser(uuid);
+    if (!user) throw new UnauthorizedException();
+    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+      user.id,
+      ticketId
+    );
+    return isAdminOrAgent;
   }
 
   @UseGuards(GqlAuthGuard)
