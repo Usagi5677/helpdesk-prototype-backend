@@ -33,6 +33,6 @@ import { RedisCacheModule } from 'src/redisCache.module';
     RedisCacheModule,
   ],
   providers: [AuthService, JwtStrategy, GqlAuthGuard, PasswordService],
-  exports: [GqlAuthGuard],
+  exports: [GqlAuthGuard, AuthService],
 })
 export class AuthModule {}
