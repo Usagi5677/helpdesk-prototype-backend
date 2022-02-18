@@ -659,7 +659,7 @@ export class TicketService {
       include: { ticketFollowings: true },
     });
     if (!ticket) return false;
-    const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     if (
       isAdminOrAgent ||
       ticket.ticketFollowings.map((tf) => tf.userId).includes(user.id)
