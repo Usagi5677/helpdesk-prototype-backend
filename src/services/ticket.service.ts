@@ -126,7 +126,7 @@ export class TicketService {
   //** Create ticket. */
   async createTicket(user: User, title: string, body: string) {
     try {
-      await this.prisma.ticket.create({
+      const ticket = await this.prisma.ticket.create({
         data: {
           createdById: user.id,
           title,
@@ -134,6 +134,7 @@ export class TicketService {
           ticketFollowings: { create: [{ userId: user.id }] },
         },
       });
+      await this.createComment(user, ticket.id, body, 'Body');
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -141,12 +142,14 @@ export class TicketService {
   }
 
   //** Set ticket priority. */
-  async setTicketPriority(id: number, priority: Priority) {
+  async setTicketPriority(user: User, id: number, priority: Priority) {
     try {
-      await this.prisma.ticket.update({
+      const ticket = await this.prisma.ticket.update({
         where: { id },
         data: { priority },
       });
+      const commentBody = `Ticket priority set to ${priority}.`;
+      await this.createComment(user, ticket.id, commentBody, 'Action');
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -154,12 +157,14 @@ export class TicketService {
   }
 
   //** Set ticket status. */
-  async setTicketStatus(id: number, status: Status) {
+  async setTicketStatus(user: User, id: number, status: Status) {
     try {
-      await this.prisma.ticket.update({
+      const ticket = await this.prisma.ticket.update({
         where: { id },
         data: { status },
       });
+      const commentBody = `Ticket status set to ${status}.`;
+      await this.createComment(user, ticket.id, commentBody, 'Action');
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -210,6 +215,8 @@ export class TicketService {
     if (!newFollower) {
       throw new BadRequestException('Invalid user.');
     }
+    const commentBody = `Added ${newFollower.fullName} (${newFollower.rcno}) as a ticket follower.`;
+    await this.createComment(user, ticketId, commentBody, 'Action');
     try {
       await this.prisma.ticketFollowing.create({
         data: { ticketId, userId: newFollower.id },
@@ -655,7 +662,6 @@ export class TicketService {
     const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
     if (
       isAdminOrAgent ||
-      ticket.createdById === user.id ||
       ticket.ticketFollowings.map((tf) => tf.userId).includes(user.id)
     )
       return true;

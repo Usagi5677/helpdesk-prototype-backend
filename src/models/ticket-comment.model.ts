@@ -4,7 +4,7 @@ import { User } from './user.model';
 
 @ObjectType()
 export class TicketComment extends BaseModel {
-  user: User;
+  user?: User;
   body: string;
   mode: string;
 }

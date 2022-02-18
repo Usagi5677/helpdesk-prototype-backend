@@ -38,20 +38,22 @@ export class TicketResolver {
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setTicketPriority(
+    @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('priority', { type: () => Priority }) priority: Priority
   ): Promise<String> {
-    await this.ticketService.setTicketPriority(ticketId, priority);
+    await this.ticketService.setTicketPriority(user, ticketId, priority);
     return `Ticket priority set to ${priority}.`;
   }
 
   @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setTicketStatus(
+    @UserEntity() user: User,
     @Args('ticketId') id: number,
     @Args('status', { type: () => Status }) status: Status
   ): Promise<String> {
-    await this.ticketService.setTicketStatus(id, status);
+    await this.ticketService.setTicketStatus(user, id, status);
     return `Ticket status set to ${status}.`;
   }
 

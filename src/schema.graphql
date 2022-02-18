@@ -222,6 +222,7 @@ type Query {
   searchUsersAndGroups(onlyAgents: Boolean!, query: String!): [SearchResult!]!
   singleKnowledgebase(knowledgebaseId: Int!): Knowledgebase!
   ticket(ticketId: Int!): Ticket!
+  ticketAttachment(id: Int!): TicketAttachment!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
   tickets(
     """Paginate after opaque cursor"""
@@ -322,7 +323,7 @@ type TicketAttachment {
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
-  user: User!
+  user: User
 }
 
 type TicketComment {
@@ -335,7 +336,7 @@ type TicketComment {
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
-  user: User!
+  user: User
 }
 
 type TicketEdge {

@@ -72,6 +72,13 @@ export class AttachmentController {
         await this.attachmentService.uploadFile(attachment, {
           name: sharepointFileName,
         });
+        const body = `attachment:${newAttachment.id}`;
+        await this.ticketService.createComment(
+          user,
+          parseInt(ticketId),
+          body,
+          'Action'
+        );
       } catch (error) {
         if (newAttachment?.id) {
           await this.prisma.ticketAttachment.delete({
