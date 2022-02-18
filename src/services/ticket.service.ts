@@ -172,7 +172,7 @@ export class TicketService {
   }
 
   //** Give feedback for ticket. */
-  async setTicketFeedback(
+  async giveTicketFeedback(
     user: User,
     id: number,
     rating: number,
@@ -215,12 +215,12 @@ export class TicketService {
     if (!newFollower) {
       throw new BadRequestException('Invalid user.');
     }
-    const commentBody = `Added ${newFollower.fullName} (${newFollower.rcno}) as a ticket follower.`;
-    await this.createComment(user, ticketId, commentBody, 'Action');
     try {
       await this.prisma.ticketFollowing.create({
         data: { ticketId, userId: newFollower.id },
       });
+      const commentBody = `Added ${newFollower.fullName} (${newFollower.rcno}) as a ticket follower.`;
+      await this.createComment(user, ticketId, commentBody, 'Action');
       // const body = `${user.fullName} has added you to a ticket.`;
       // await this.notificationService.createInBackground(
       //   {

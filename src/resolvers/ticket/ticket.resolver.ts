@@ -64,7 +64,7 @@ export class TicketResolver {
     @Args('rating') rating: number,
     @Args('feedback') feedback: string
   ): Promise<String> {
-    await this.ticketService.setTicketFeedback(
+    await this.ticketService.giveTicketFeedback(
       user,
       ticketId,
       rating,
