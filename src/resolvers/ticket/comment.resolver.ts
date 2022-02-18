@@ -59,7 +59,7 @@ export class CommentResolver {
       ticketId
     );
     const where: any = { AND: [{ ticketId }] };
-    if (!isAdminOrAgent) where.AND.push({ mode: 'Public' });
+    if (!isAdminOrAgent) where.AND.push({ mode: { not: 'Private' } });
 
     return await this.prisma.ticketComment.findMany({
       where,
