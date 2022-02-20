@@ -616,6 +616,7 @@ export class TicketService {
         ticketAssignments: { include: { user: true } },
         checklistItems: { orderBy: { id: 'asc' } },
       },
+      orderBy: { id: 'desc' },
     });
 
     // Mapping from many to many relationship to a more readable gql form

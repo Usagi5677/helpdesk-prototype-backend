@@ -72,12 +72,12 @@ export class AttachmentController {
         await this.attachmentService.uploadFile(attachment, {
           name: sharepointFileName,
         });
-        const body = `attachment:${newAttachment.id}`;
+        const body = `${description} attachment:${newAttachment.id}`;
         await this.ticketService.createComment(
           user,
           parseInt(ticketId),
           body,
-          'Action'
+          'Public'
         );
       } catch (error) {
         if (newAttachment?.id) {
