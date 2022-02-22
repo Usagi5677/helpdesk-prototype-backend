@@ -8,6 +8,7 @@ export class TicketConnectionArgs extends ConnectionArgs {
   search?: string;
   status?: Status;
   createdById?: number;
+  createdByUserId?: string;
   categoryIds?: number[];
   priority?: Priority;
   self?: boolean;

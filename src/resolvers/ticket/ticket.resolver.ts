@@ -185,7 +185,8 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
-    (args.self = true), (args.createdById = user.id);
+    args.self = true;
+    args.createdById = user.id;
     return await this.ticketService.getTicketsWithPagination(user, args);
   }
 
@@ -196,6 +197,16 @@ export class TicketResolver {
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
     args.self = false;
+    if (args.createdByUserId) {
+      const createdBy = await this.prisma.user.findFirst({
+        where: { userId: args.createdByUserId },
+      });
+      if (!createdBy) {
+        args.createdById = -1;
+      } else {
+        args.createdById = createdBy.id;
+      }
+    }
     return await this.ticketService.getTicketsWithPagination(user, args);
   }
 

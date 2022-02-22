@@ -200,6 +200,7 @@ type Query {
     before: String
     categoryIds: [Int!]
     createdById: Int
+    createdByUserId: String
 
     """Paginate first"""
     first: Int
@@ -232,6 +233,7 @@ type Query {
     before: String
     categoryIds: [Int!]
     createdById: Int
+    createdByUserId: String
 
     """Paginate first"""
     first: Int
