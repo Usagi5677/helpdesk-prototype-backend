@@ -79,7 +79,7 @@ type Mutation {
   changeCategoryName(id: Int!, name: String!): String!
   createCategory(name: String!): String!
   createKnowledgebase(body: String!, mode: String!, title: String!): String!
-  createTicket(body: String!, title: String!): String!
+  createTicket(body: String!, title: String!): Int!
   createUserGroup(mode: String!, name: String!): String!
   deleteCategory(id: Int!): String!
   deleteChecklistItem(id: Int!): String!

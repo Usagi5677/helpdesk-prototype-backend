@@ -25,14 +25,13 @@ export class TicketResolver {
     private prisma: PrismaService
   ) {}
 
-  @Mutation(() => String)
+  @Mutation(() => Int)
   async createTicket(
     @UserEntity() user: User,
     @Args('title') title: string,
     @Args('body') body: string
-  ): Promise<String> {
-    await this.ticketService.createTicket(user, title, body);
-    return `Successfully created ticket.`;
+  ): Promise<number> {
+    return await this.ticketService.createTicket(user, title, body);
   }
 
   @Roles('Admin', 'Agent')

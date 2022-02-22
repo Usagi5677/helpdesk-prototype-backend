@@ -124,7 +124,7 @@ export class TicketService {
   }
 
   //** Create ticket. */
-  async createTicket(user: User, title: string, body: string) {
+  async createTicket(user: User, title: string, body: string): Promise<number> {
     try {
       const ticket = await this.prisma.ticket.create({
         data: {
@@ -135,6 +135,7 @@ export class TicketService {
         },
       });
       await this.createComment(user, ticket.id, body, 'Body');
+      return ticket.id;
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
