@@ -299,12 +299,12 @@ type Ticket {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
   createdBy: User!
-  feedback: String!
+  feedback: String
   followers: [User!]!
   id: Int!
   ownerId: Int
   priority: Priority
-  rating: Int!
+  rating: Int
   started: Boolean!
   status: Status!
   title: String!

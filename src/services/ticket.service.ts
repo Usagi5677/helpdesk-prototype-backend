@@ -193,6 +193,10 @@ export class TicketService {
         where: { id },
         data: { rating, feedback },
       });
+      const commentBody = `Ticket ${
+        feedback ? 'feedback:' : 'rating'
+      } ${feedback} rating:${rating}`;
+      await this.createComment(user, ticket.id, commentBody, 'Action');
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
