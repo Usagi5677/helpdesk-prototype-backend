@@ -124,7 +124,7 @@ export class TicketService {
   }
 
   //** Create ticket. */
-  async createTicket(user: User, title: string, body: string) {
+  async createTicket(user: User, title: string, body: string): Promise<number> {
     try {
       const ticket = await this.prisma.ticket.create({
         data: {
@@ -135,6 +135,7 @@ export class TicketService {
         },
       });
       await this.createComment(user, ticket.id, body, 'Body');
+      return ticket.id;
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -192,6 +193,10 @@ export class TicketService {
         where: { id },
         data: { rating, feedback },
       });
+      const commentBody = `Ticket ${
+        feedback ? 'feedback:' : 'rating'
+      } ${feedback} rating:${rating}`;
+      await this.createComment(user, ticket.id, commentBody, 'Action');
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -270,7 +275,7 @@ export class TicketService {
         throw new UnauthorizedException('Not authorized to remove followers.');
       }
     }
-    if (user.id === deletingFollowerId) {
+    if (ticket.createdById === deletingFollowerId) {
       throw new BadRequestException(
         `Ticket creator cannot be removed as a follower.`
       );
@@ -562,6 +567,8 @@ export class TicketService {
       self,
       from,
       to,
+      assignedToId,
+      followingId,
     } = args;
 
     // Only these roles can see all results, others can only see thier own tickets
@@ -572,6 +579,15 @@ export class TicketService {
     let where: any = { AND: [] };
     if (createdById) {
       where.AND.push({ createdById });
+    }
+    if (assignedToId) {
+      where.AND.push({ ticketAssignments: { some: { userId: assignedToId } } });
+    }
+    if (followingId) {
+      where.AND.push(
+        { ticketFollowings: { some: { userId: followingId } } },
+        { createdById: { not: followingId } }
+      );
     }
     if (status) {
       where.AND.push({ status });

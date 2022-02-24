@@ -25,14 +25,13 @@ export class TicketResolver {
     private prisma: PrismaService
   ) {}
 
-  @Mutation(() => String)
+  @Mutation(() => Int)
   async createTicket(
     @UserEntity() user: User,
     @Args('title') title: string,
     @Args('body') body: string
-  ): Promise<String> {
-    await this.ticketService.createTicket(user, title, body);
-    return `Successfully created ticket.`;
+  ): Promise<number> {
+    return await this.ticketService.createTicket(user, title, body);
   }
 
   @Roles('Admin', 'Agent')
@@ -186,7 +185,8 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
-    (args.self = true), (args.createdById = user.id);
+    args.self = true;
+    args.createdById = user.id;
     return await this.ticketService.getTicketsWithPagination(user, args);
   }
 
@@ -197,6 +197,57 @@ export class TicketResolver {
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
     args.self = false;
+    if (args.createdByUserId) {
+      const createdBy = await this.prisma.user.findFirst({
+        where: { userId: args.createdByUserId },
+      });
+      if (!createdBy) {
+        args.createdById = -1;
+      } else {
+        args.createdById = createdBy.id;
+      }
+    }
+    return await this.ticketService.getTicketsWithPagination(user, args);
+  }
+
+  @Roles('Agent')
+  @Query(() => PaginatedTickets)
+  async assignedTickets(
+    @UserEntity() user: User,
+    @Args() args: TicketConnectionArgs
+  ): Promise<PaginatedTickets> {
+    args.self = false;
+    args.assignedToId = user.id;
+    if (args.createdByUserId) {
+      const createdBy = await this.prisma.user.findFirst({
+        where: { userId: args.createdByUserId },
+      });
+      if (!createdBy) {
+        args.createdById = -1;
+      } else {
+        args.createdById = createdBy.id;
+      }
+    }
+    return await this.ticketService.getTicketsWithPagination(user, args);
+  }
+
+  @Query(() => PaginatedTickets)
+  async followingTickets(
+    @UserEntity() user: User,
+    @Args() args: TicketConnectionArgs
+  ): Promise<PaginatedTickets> {
+    args.self = false;
+    args.followingId = user.id;
+    if (args.createdByUserId) {
+      const createdBy = await this.prisma.user.findFirst({
+        where: { userId: args.createdByUserId },
+      });
+      if (!createdBy) {
+        args.createdById = -1;
+      } else {
+        args.createdById = createdBy.id;
+      }
+    }
     return await this.ticketService.getTicketsWithPagination(user, args);
   }
 
