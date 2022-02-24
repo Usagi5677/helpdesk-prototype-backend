@@ -15,4 +15,5 @@ export class TicketConnectionArgs extends ConnectionArgs {
   from?: Date;
   to?: Date;
   assignedToId?: number;
+  followingId?: number;
 }

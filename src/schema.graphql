@@ -173,6 +173,7 @@ type Query {
 
     """Paginate first"""
     first: Int
+    followingId: Int
     from: Date
 
     """Paginate last"""
@@ -198,6 +199,30 @@ type Query {
     name: String
   ): PaginatedCategory!
   comments(ticketId: Int!): [TicketComment!]!
+  followingTickets(
+    """Paginate after opaque cursor"""
+    after: String
+    assignedToId: Int
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryIds: [Int!]
+    createdById: Int
+    createdByUserId: String
+
+    """Paginate first"""
+    first: Int
+    followingId: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    self: Boolean
+    status: Status
+    to: Date
+  ): PaginatedTickets!
   getAllKnowledgebase(
     """Paginate after opaque cursor"""
     after: String
@@ -228,6 +253,7 @@ type Query {
 
     """Paginate first"""
     first: Int
+    followingId: Int
     from: Date
 
     """Paginate last"""
@@ -262,6 +288,7 @@ type Query {
 
     """Paginate first"""
     first: Int
+    followingId: Int
     from: Date
 
     """Paginate last"""

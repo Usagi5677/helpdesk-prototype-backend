@@ -275,7 +275,7 @@ export class TicketService {
         throw new UnauthorizedException('Not authorized to remove followers.');
       }
     }
-    if (user.id === deletingFollowerId) {
+    if (ticket.createdById === deletingFollowerId) {
       throw new BadRequestException(
         `Ticket creator cannot be removed as a follower.`
       );
@@ -568,6 +568,7 @@ export class TicketService {
       from,
       to,
       assignedToId,
+      followingId,
     } = args;
 
     // Only these roles can see all results, others can only see thier own tickets
@@ -581,6 +582,12 @@ export class TicketService {
     }
     if (assignedToId) {
       where.AND.push({ ticketAssignments: { some: { userId: assignedToId } } });
+    }
+    if (followingId) {
+      where.AND.push(
+        { ticketFollowings: { some: { userId: followingId } } },
+        { createdById: { not: followingId } }
+      );
     }
     if (status) {
       where.AND.push({ status });
