@@ -160,6 +160,29 @@ type Profile {
 
 type Query {
   appUsers: [User!]!
+  assignedTickets(
+    """Paginate after opaque cursor"""
+    after: String
+    assignedToId: Int
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryIds: [Int!]
+    createdById: Int
+    createdByUserId: String
+
+    """Paginate first"""
+    first: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    self: Boolean
+    status: Status
+    to: Date
+  ): PaginatedTickets!
   categories(
     """Paginate after opaque cursor"""
     after: String
@@ -195,6 +218,7 @@ type Query {
   myTickets(
     """Paginate after opaque cursor"""
     after: String
+    assignedToId: Int
 
     """Paginate before opaque cursor"""
     before: String
@@ -228,6 +252,7 @@ type Query {
   tickets(
     """Paginate after opaque cursor"""
     after: String
+    assignedToId: Int
 
     """Paginate before opaque cursor"""
     before: String

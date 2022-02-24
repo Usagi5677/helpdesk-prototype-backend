@@ -14,4 +14,5 @@ export class TicketConnectionArgs extends ConnectionArgs {
   self?: boolean;
   from?: Date;
   to?: Date;
+  assignedToId?: number;
 }

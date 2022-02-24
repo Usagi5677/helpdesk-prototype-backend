@@ -567,6 +567,7 @@ export class TicketService {
       self,
       from,
       to,
+      assignedToId,
     } = args;
 
     // Only these roles can see all results, others can only see thier own tickets
@@ -577,6 +578,9 @@ export class TicketService {
     let where: any = { AND: [] };
     if (createdById) {
       where.AND.push({ createdById });
+    }
+    if (assignedToId) {
+      where.AND.push({ ticketAssignments: { some: { userId: assignedToId } } });
     }
     if (status) {
       where.AND.push({ status });

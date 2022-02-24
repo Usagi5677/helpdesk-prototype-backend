@@ -311,6 +311,7 @@ export class UserService {
       data: roles.map((role) => ({ userId: user.id, role })),
     });
     await this.redisCacheService.del(`user-uuid-${userId}`);
+    await this.redisCacheService.del(`roles-${user.id}`);
   }
 
   async createIfNotExists(userId: string): Promise<[User, Profile]> {
