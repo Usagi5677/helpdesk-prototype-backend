@@ -286,6 +286,7 @@ enum Status {
 
 type Subscription {
   commentCreated(ticketId: Int!): TicketComment!
+  notificationCreated: Notification!
 }
 
 type Ticket {

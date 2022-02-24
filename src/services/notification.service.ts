@@ -5,12 +5,14 @@ import nm, { SendMailOptions, Transporter } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { PrismaService } from '../prisma/prisma.service';
 import { Nodemailer } from '../resolvers/notification/notification.provider';
+import { PubSub } from 'graphql-subscriptions';
 
 export interface Notification {
   userId: number;
   body: string;
 }
 
+export const pubSubTwo = new PubSub();
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
@@ -36,12 +38,18 @@ export class NotificationService {
   }
 
   async create(notification: Notification, emailOptions?: SendMailOptions) {
-    await this.prisma.notification.create({
+    const notif = await this.prisma.notification.create({
       data: {
         body: notification.body,
         userId: notification.userId,
       },
     });
+    //console.log(notif);
+    await pubSubTwo.publish('notificationCreated', {
+      notificationCreated: notif,
+    });
+    const value = pubSubTwo.asyncIterator('notificationCreated');
+    console.log(value);
     if (emailOptions) {
       this.sendEmail(emailOptions);
     }

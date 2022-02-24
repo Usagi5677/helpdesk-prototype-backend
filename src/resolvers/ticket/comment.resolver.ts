@@ -17,6 +17,7 @@ export class CommentResolver {
   ) {}
   @Subscription(() => TicketComment, {
     filter: (payload, variables) => {
+      console.log(payload);
       return payload.commentCreated.ticketId === variables.ticketId;
     },
     async resolve(this, payload, variables, context) {

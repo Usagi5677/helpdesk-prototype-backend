@@ -15,13 +15,15 @@ import { UserService } from './user.service';
 import { KnowledgebaseConnectionArgs } from 'src/models/args/knowledgebase-connection.args';
 import { PaginatedKnowledgebase } from 'src/models/pagination/knowledgebase-connection.model';
 import { Knowledgebase } from 'src/models/knowledgebase.model';
+import { NotificationService } from './notification.service';
 
 @Injectable()
 export class KnowledgebaseService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
-    private readonly redisCacheService: RedisCacheService
+    private readonly redisCacheService: RedisCacheService,
+    private readonly notification: NotificationService
   ) {}
 
   //** Create knowledgebase. */
@@ -40,6 +42,13 @@ export class KnowledgebaseService {
           mode,
         },
       });
+      await this.notification.createInBackground(
+        {
+          userId: user.id,
+          body: `New knowledgebase created`,
+        },
+        {}
+      );
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');

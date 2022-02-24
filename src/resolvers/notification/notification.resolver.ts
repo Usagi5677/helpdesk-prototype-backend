@@ -1,15 +1,26 @@
-import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import {
+  Args,
+  Int,
+  Mutation,
+  Query,
+  Resolver,
+  Subscription,
+} from '@nestjs/graphql';
 import { Notification } from '../../models/notification.model';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserEntity } from '../../decorators/user.decorator';
 import { User } from '../../models/user.model';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
+import { NotificationService, pubSubTwo } from 'src/services/notification.service';
 
 @UseGuards(GqlAuthGuard)
 @Resolver(() => Notification)
 export class NotificationResolver {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService
+  ) {}
 
   @Query(() => [Notification])
   async notifications(@UserEntity() user: User) {
@@ -39,5 +50,17 @@ export class NotificationResolver {
       data: { readAt: new Date() },
     });
     return true;
+  }
+
+  @Subscription(() => Notification, {
+    filter: (payload, variables) => {
+      return true;
+    },
+    async resolve(this: any, payload: { notificationCreated: Notification }) {
+      return payload.notificationCreated;
+    },
+  })
+  async notificationCreated() {
+    return pubSubTwo.asyncIterator('notificationCreated');
   }
 }
