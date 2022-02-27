@@ -12,16 +12,9 @@ import { UserEntity } from '../../decorators/user.decorator';
 import { User } from '../../models/user.model';
 import { Inject, UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
-import {
-  NotificationService,
-  pubSubTwo,
-} from 'src/services/notification.service';
+import { NotificationService } from 'src/services/notification.service';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
-
-enum SUBSCRIPTION_EVENTS {
-  newPerson = 'newPerson',
-}
 
 @Resolver(() => Notification)
 export class NotificationResolver {
