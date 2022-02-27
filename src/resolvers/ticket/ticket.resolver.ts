@@ -23,6 +23,7 @@ import { Status } from 'src/common/enums/status';
 import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
 import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
 import { PrismaService } from 'nestjs-prisma';
+import { TicketStatusCount } from 'src/models/ticket-status-count';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -314,5 +315,14 @@ export class TicketResolver {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
     }
+  }
+
+  @Roles('Admin', 'Agent')
+  @Query(() => [TicketStatusCount])
+  async ticketStatusCount(): Promise<TicketStatusCount[]> {
+    const result = await this.prisma.$queryRaw<
+      TicketStatusCount[]
+    >`SELECT status, count(*) FROM "Ticket" GROUP BY status`;
+    return result;
   }
 }
