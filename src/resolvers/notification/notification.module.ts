@@ -16,7 +16,6 @@ import { AuthModule } from '../auth/auth.module';
       name: 'notification',
     }),
     UserModule,
-    AuthModule,
   ],
   providers: [
     NotificationProvider,

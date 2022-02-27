@@ -10,18 +10,28 @@ import { Notification } from '../../models/notification.model';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserEntity } from '../../decorators/user.decorator';
 import { User } from '../../models/user.model';
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
-import { NotificationService, pubSubTwo } from 'src/services/notification.service';
+import {
+  NotificationService,
+  pubSubTwo,
+} from 'src/services/notification.service';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 
-@UseGuards(GqlAuthGuard)
+enum SUBSCRIPTION_EVENTS {
+  newPerson = 'newPerson',
+}
+
 @Resolver(() => Notification)
 export class NotificationResolver {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {}
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => [Notification])
   async notifications(@UserEntity() user: User) {
     return await this.prisma.notification.findMany({
@@ -31,6 +41,7 @@ export class NotificationResolver {
     });
   }
 
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean)
   async readAllNotifications(@UserEntity() user: User) {
     await this.prisma.$queryRaw`
@@ -40,6 +51,7 @@ export class NotificationResolver {
     return true;
   }
 
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean)
   async readNotification(
     @UserEntity() user: User,
@@ -54,6 +66,8 @@ export class NotificationResolver {
 
   @Subscription(() => Notification, {
     filter: (payload, variables) => {
+      console.log('payload');
+      console.log(payload);
       return true;
     },
     async resolve(this: any, payload: { notificationCreated: Notification }) {
@@ -61,6 +75,6 @@ export class NotificationResolver {
     },
   })
   async notificationCreated() {
-    return pubSubTwo.asyncIterator('notificationCreated');
+    return this.pubSub.asyncIterator('notificationCreated');
   }
 }

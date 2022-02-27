@@ -15,6 +15,7 @@ import { AttachmentModule } from './resolvers/attachment/attachment.module';
 import { BullModule } from '@nestjs/bull';
 import { KnowledgebaseModule } from './resolvers/knowledgebase/knowledgebase.module';
 import jwtDecode from 'jwt-decode';
+import { PubsubModule } from './resolvers/pubsub/pubsub.module';
 
 @Module({
   imports: [
@@ -35,7 +36,7 @@ import jwtDecode from 'jwt-decode';
           context: ({ req }) => ({ req }),
           subscriptions: {
             'subscriptions-transport-ws': {
-              onConnect: (connectionParams) => {
+              onConnect: (connectionParams: { authToken: any }) => {
                 const authHeader = connectionParams.authToken;
                 if (!authHeader) throw new UnauthorizedException();
                 const token = authHeader.split('Bearer ')[1];
@@ -59,6 +60,7 @@ import jwtDecode from 'jwt-decode';
         port: 6379,
       },
     }),
+    PubsubModule,
     AuthModule,
     UserModule,
     TicketModule,

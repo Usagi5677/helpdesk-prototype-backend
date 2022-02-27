@@ -1,6 +1,7 @@
 import { PrismaService } from 'nestjs-prisma';
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -16,6 +17,8 @@ import { KnowledgebaseConnectionArgs } from 'src/models/args/knowledgebase-conne
 import { PaginatedKnowledgebase } from 'src/models/pagination/knowledgebase-connection.model';
 import { Knowledgebase } from 'src/models/knowledgebase.model';
 import { NotificationService } from './notification.service';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 
 @Injectable()
 export class KnowledgebaseService {
@@ -23,7 +26,8 @@ export class KnowledgebaseService {
     private prisma: PrismaService,
     private userService: UserService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly notification: NotificationService
+    private readonly notification: NotificationService,
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {}
 
   //** Create knowledgebase. */
@@ -34,7 +38,7 @@ export class KnowledgebaseService {
     mode: string
   ) {
     try {
-      await this.prisma.information.create({
+      const notif = await this.prisma.information.create({
         data: {
           createdById: user.id,
           title,
@@ -49,6 +53,9 @@ export class KnowledgebaseService {
         },
         {}
       );
+      await this.pubSub.publish('notificationCreated', {
+        notificationCreated: notif,
+      });
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');

@@ -45,11 +45,7 @@ export class NotificationService {
       },
     });
     //console.log(notif);
-    await pubSubTwo.publish('notificationCreated', {
-      notificationCreated: notif,
-    });
-    const value = pubSubTwo.asyncIterator('notificationCreated');
-    console.log(value);
+
     if (emailOptions) {
       this.sendEmail(emailOptions);
     }

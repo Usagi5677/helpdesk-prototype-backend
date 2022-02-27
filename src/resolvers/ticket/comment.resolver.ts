@@ -1,19 +1,22 @@
-import { UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Inject, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
-import { pubSub, TicketService } from 'src/services/ticket.service';
+import { TicketService } from 'src/services/ticket.service';
 import { UserEntity } from 'src/decorators/user.decorator';
 import { User } from 'src/models/user.model';
 import { PrismaService } from 'nestjs-prisma';
 import { TicketComment } from 'src/models/ticket-comment.model';
 import { AuthService } from 'src/services/auth.service';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PUB_SUB } from '../pubsub/pubsub.module';
 
 @Resolver(() => TicketComment)
 export class CommentResolver {
   constructor(
     private ticketService: TicketService,
     private prisma: PrismaService,
-    private authService: AuthService
+    private authService: AuthService,
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {}
   @Subscription(() => TicketComment, {
     filter: (payload, variables) => {
@@ -30,7 +33,7 @@ export class CommentResolver {
     },
   })
   async commentCreated(@Args('ticketId') ticketId: number) {
-    return pubSub.asyncIterator('commentCreated');
+    return this.pubSub.asyncIterator('commentCreated');
   }
 
   async hasAccess(uuid: string, ticketId: number): Promise<boolean> {

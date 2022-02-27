@@ -1,6 +1,7 @@
 import { PrismaService } from 'nestjs-prisma';
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -23,16 +24,17 @@ import emailTemplate from 'src/common/helpers/emailTemplate';
 import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
 import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model';
 import * as moment from 'moment';
-import { PubSub } from 'graphql-subscriptions';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 
-export const pubSub = new PubSub();
 @Injectable()
 export class TicketService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
     private notificationService: NotificationService,
-    private readonly redisCacheService: RedisCacheService
+    private readonly redisCacheService: RedisCacheService,
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {}
 
   //** Create category. */
@@ -524,7 +526,7 @@ export class TicketService {
         },
         include: { user: true },
       });
-      await pubSub.publish('commentCreated', { commentCreated: comment });
+      await this.pubSub.publish('commentCreated', { commentCreated: comment });
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
