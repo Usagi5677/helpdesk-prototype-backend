@@ -5,6 +5,7 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { Prisma, TicketComment, TicketFollowing, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
@@ -26,9 +27,12 @@ import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model'
 import * as moment from 'moment';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
+import { Cron } from '@nestjs/schedule';
+import { TicketStatusCount } from 'src/models/ticket-status-count';
 
 @Injectable()
 export class TicketService {
+  private readonly logger = new Logger(TicketService.name);
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
@@ -747,5 +751,38 @@ export class TicketService {
     const isAssigned = await this.isAssignedToTicket(userId, ticketId);
     if (isAssigned) return true;
     return false;
+  }
+
+  // Cron job runs at 23:59 every day
+  @Cron('59 23 * * *')
+  async updateDailyStatusHistroy() {
+    const now = moment();
+    this.logger.verbose('Ticket status history cron job');
+    const latest = await this.prisma.ticketStatusHistory.findFirst({
+      orderBy: { id: 'desc' },
+    });
+    // Check if there already are entries for current day to prevent duplicates
+    if (latest) {
+      const latestTime = moment(latest.createdAt);
+      if (latestTime.isSame(now, 'day')) {
+        this.logger.verbose('Already exists for today');
+        return;
+      }
+    }
+    const statusCounts: TicketStatusCount[] = [];
+    for (const status of Object.keys(Status) as Array<keyof typeof Status>) {
+      const count = await this.prisma.ticket.count({
+        where: {
+          status: status,
+        },
+      });
+      statusCounts.push({
+        status: Status[status],
+        count,
+      });
+    }
+    await this.prisma.ticketStatusHistory.createMany({
+      data: statusCounts.map((sc) => ({ status: sc.status, count: sc.count })),
+    });
   }
 }

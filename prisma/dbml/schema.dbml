@@ -186,6 +186,17 @@ Table TicketAttachment {
   mode String [not null, default: 'Public']
 }
 
+Table TicketStatusHistory {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  status TicketStatus [not null]
+  count Int [not null]
+
+  indexes {
+    (createdAt, status) [unique]
+  }
+}
+
 Enum Role {
   Agent
   Admin

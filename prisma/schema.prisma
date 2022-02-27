@@ -206,3 +206,12 @@ model TicketAttachment {
   sharepointFileName String?
   mode               String   @default("Public")
 }
+
+model TicketStatusHistory {
+  id        Int          @id @default(autoincrement())
+  createdAt DateTime     @default(now())
+  status    TicketStatus
+  count     Int
+
+  @@unique([createdAt, status])
+}

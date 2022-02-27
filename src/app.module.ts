@@ -16,6 +16,7 @@ import { BullModule } from '@nestjs/bull';
 import { KnowledgebaseModule } from './resolvers/knowledgebase/knowledgebase.module';
 import jwtDecode from 'jwt-decode';
 import { PubsubModule } from './resolvers/pubsub/pubsub.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { PubsubModule } from './resolvers/pubsub/pubsub.module';
     TicketModule,
     AttachmentModule,
     KnowledgebaseModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService, AppResolver, DateScalar],
