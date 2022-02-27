@@ -275,6 +275,7 @@ type Query {
   ticket(ticketId: Int!): Ticket!
   ticketAttachment(id: Int!): TicketAttachment!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
+  ticketStatusCount: [TicketStatusCount!]!
   tickets(
     """Paginate after opaque cursor"""
     after: String
@@ -405,6 +406,11 @@ type TicketPageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
+}
+
+type TicketStatusCount {
+  count: Int!
+  status: String!
 }
 
 type User {
