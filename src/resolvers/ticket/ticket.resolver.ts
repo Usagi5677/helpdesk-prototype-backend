@@ -24,13 +24,15 @@ import { PaginatedTickets } from 'src/models/pagination/ticket-connection.model'
 import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
 import { PrismaService } from 'nestjs-prisma';
 import { TicketStatusCount } from 'src/models/ticket-status-count';
+import { UserService } from 'src/services/user.service';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
 export class TicketResolver {
   constructor(
     private ticketService: TicketService,
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    private userService: UserService
   ) {}
 
   @Mutation(() => Int)
@@ -317,12 +319,24 @@ export class TicketResolver {
     }
   }
 
-  @Roles('Admin', 'Agent')
   @Query(() => [TicketStatusCount])
-  async ticketStatusCount(): Promise<TicketStatusCount[]> {
-    const result = await this.prisma.$queryRaw<
-      TicketStatusCount[]
-    >`SELECT status, count(*) FROM "Ticket" GROUP BY status`;
-    return result;
+  async ticketStatusCount(
+    @UserEntity() user: User
+  ): Promise<TicketStatusCount[]> {
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
+    const statusCounts: TicketStatusCount[] = [];
+    for (const status of Object.keys(Status) as Array<keyof typeof Status>) {
+      const count = await this.prisma.ticket.count({
+        where: {
+          status: status,
+          createdById: isAdminOrAgent ? undefined : user.id,
+        },
+      });
+      statusCounts.push({
+        status: Status[status],
+        count,
+      });
+    }
+    return statusCounts;
   }
 }
