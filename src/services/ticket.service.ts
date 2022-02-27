@@ -701,7 +701,7 @@ export class TicketService {
       },
     });
     if (!ticket) throw new BadRequestException('Ticket not found.');
-    const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     if (
       !isAdminOrAgent &&
       ticket.createdById !== user.id &&

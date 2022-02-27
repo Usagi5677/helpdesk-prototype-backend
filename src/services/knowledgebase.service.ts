@@ -108,7 +108,7 @@ export class KnowledgebaseService {
     });
     if (!knowledgebase)
       throw new BadRequestException('Knowledge base not found.');
-    const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     if (!isAdminOrAgent) {
       throw new UnauthorizedException(
         'You do not have access to this knowledge base.'
