@@ -26,7 +26,7 @@ export class KnowledgebaseService {
     private prisma: PrismaService,
     private userService: UserService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly notification: NotificationService,
+    private readonly notificationService: NotificationService,
     @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {}
 
@@ -46,22 +46,19 @@ export class KnowledgebaseService {
           mode,
         },
       });
-      /*
-      await this.notification.createInBackground(
+      await this.notificationService.createInBackground(
         {
           userId: user.id,
-          body: 'New knowledgebase created',
+          body: body,
         },
         {}
       );
       await this.pubSub.publish('notificationCreated', {
         notificationCreated: notif,
       });
-*/
-      return notif.id;
     } catch (e) {
       console.log(e);
-      throw new InternalServerErrorException('Unexpected error occurd.');
+      throw new InternalServerErrorException('Unexpected error occured.');
     }
   }
 

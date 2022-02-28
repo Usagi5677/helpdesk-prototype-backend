@@ -531,6 +531,69 @@ export class TicketService {
         include: { user: true },
       });
       await this.pubSub.publish('commentCreated', { commentCreated: comment });
+
+      //get all users involved in ticket
+      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
+        where: {
+          id: ticketId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
+        where: {
+          id: ticketId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      //combine the id's
+      //console.log(getFollowingUsers[0].user[])
+      const combinedIDs = [...getAssignedAgents, ...getFollowingUsers, user.id];
+
+      console.log('getAssignedAgents');
+      console.log(getAssignedAgents);
+      console.log('getFollowingUsers');
+      console.log(getFollowingUsers);
+      console.log('combinedIDs');
+      console.log(combinedIDs);
+      //get unique ids only
+      const unique = (value, index, self) => {
+        return self.indexOf(value) === index;
+      };
+
+      const uniqueIDs = combinedIDs.filter(unique);
+
+      //remove user who is commenting
+      uniqueIDs.filter(function (value) {
+        return value != user.id;
+      });
+
+      /*
+      for (let index = 0; index < uniqueIDs.length; index++) {
+        await this.notificationService.createInBackground(
+          {
+            userId: uniqueIDs[index],
+            body: `User ${uniqueIDs[index]} commented on ticket ${ticketId}`,
+          },
+          {}
+        );
+        await this.pubSub.publish('notificationCreated', {
+          notificationCreated: comment,
+        });
+      }
+      */
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');

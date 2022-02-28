@@ -45,16 +45,17 @@ export class NotificationResolver {
   }
 
   @UseGuards(GqlAuthGuard)
-  @Mutation(() => Boolean)
-  async readNotification(
-    @UserEntity() user: User,
-    @Args('notificationId', { type: () => Int }) notificationId: number
-  ) {
-    await this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { readAt: new Date() },
-    });
-    return true;
+  @Mutation(() => String)
+  async readNotification(@Args('notificationId') notificationId: number) {
+    try {
+      await this.prisma.notification.update({
+        where: { id: notificationId },
+        data: { readAt: new Date() },
+      });
+    } catch (e) {
+      console.log(e);
+    }
+    return `Successfully read notification`;
   }
 
   @Subscription(() => Notification, {
