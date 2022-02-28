@@ -57,10 +57,11 @@ export class KnowledgebaseService {
       await this.pubSub.publish('notificationCreated', {
         notificationCreated: notif,
       });
-      */
+*/
+      return notif.id;
     } catch (e) {
       console.log(e);
-      throw new InternalServerErrorException('Unexpected error occureddddd.');
+      throw new InternalServerErrorException('Unexpected error occurd.');
     }
   }
 
