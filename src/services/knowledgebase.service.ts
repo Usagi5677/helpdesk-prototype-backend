@@ -46,19 +46,21 @@ export class KnowledgebaseService {
           mode,
         },
       });
+      /*
       await this.notification.createInBackground(
         {
           userId: user.id,
-          body: `New knowledgebase created`,
+          body: 'New knowledgebase created',
         },
         {}
       );
       await this.pubSub.publish('notificationCreated', {
         notificationCreated: notif,
       });
+      */
     } catch (e) {
       console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
+      throw new InternalServerErrorException('Unexpected error occureddddd.');
     }
   }
 
