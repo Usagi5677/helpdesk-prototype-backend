@@ -38,7 +38,7 @@ export class NotificationService {
   }
 
   async create(notification: Notification, emailOptions?: SendMailOptions) {
-    const notif = await this.prisma.notification.create({
+    await this.prisma.notification.create({
       data: {
         body: notification.body,
         userId: notification.userId,
