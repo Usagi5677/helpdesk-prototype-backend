@@ -565,12 +565,11 @@ export class TicketService {
         return value != user.id;
       });
 
-      /*
       for (let index = 0; index < uniqueIDs.length; index++) {
         await this.notificationService.createInBackground(
           {
             userId: uniqueIDs[index],
-            body: `User ${uniqueIDs[index]} commented on ticket ${ticketId}`,
+            body: `User ${user.id} commented on ticket ${ticketId}`,
           },
           {}
         );
@@ -578,7 +577,6 @@ export class TicketService {
           notificationCreated: comment,
         });
       }
-      */
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
