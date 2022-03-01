@@ -564,14 +564,17 @@ export class TicketService {
       const uniqueIDs = [...new Set(combinedIDs)];
 
       //remove user who is commenting
-      uniqueIDs.filter(function (value) {
+      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
         return value != user.id;
       });
+      //console.log('uniqueIDwithoutCurrentUser');
+      //console.log(uniqueIDsWithoutCurrentUser);
 
-      for (let index = 0; index < uniqueIDs.length; index++) {
+      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
-          userId: uniqueIDs[index],
+          userId: uniqueIDsWithoutCurrentUser[index],
           body: `${user.fullName} (${user.rcno}) commented on ticket id: ${ticketId}`,
+          link: `/ticket/${ticketId}`,
           //body: body,
         });
         await this.pubSub.publish('notificationCreated', {

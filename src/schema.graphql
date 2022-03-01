@@ -109,6 +109,7 @@ type Notification {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
   id: Int!
+  link: String
   readAt: Date
 
   """Identifies the date and time when the object was last updated."""

@@ -10,6 +10,7 @@ import { PubSub } from 'graphql-subscriptions';
 export interface Notification {
   userId: number;
   body: string;
+  link?: string;
 }
 
 export const pubSubTwo = new PubSub();
@@ -42,6 +43,7 @@ export class NotificationService {
       data: {
         body: notification.body,
         userId: notification.userId,
+        link: notification.link,
       },
     });
     //console.log(notif);
