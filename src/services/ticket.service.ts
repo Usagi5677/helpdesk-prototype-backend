@@ -569,11 +569,18 @@ export class TicketService {
       });
       //console.log('uniqueIDwithoutCurrentUser');
       //console.log(uniqueIDsWithoutCurrentUser);
-
+      const getTicketTitle = await this.prisma.ticket.findFirst({
+        where: {
+          id: ticketId,
+        },
+        select: {
+          title: true,
+        },
+      });
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) commented on ticket id: ${ticketId}`,
+          body: `${user.fullName} (${user.rcno}) commented on ticket (${ticketId}): ${getTicketTitle.title}`,
           link: `/ticket/${ticketId}`,
           //body: body,
         });
