@@ -535,32 +535,20 @@ export class TicketService {
       //get all users involved in ticket
       const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
         where: {
-          id: ticketId,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-            },
-          },
+          ticketId: ticketId,
         },
       });
       const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
         where: {
-          id: ticketId,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-            },
-          },
+          ticketId: ticketId,
         },
       });
 
       //combine the id's
-      //console.log(getFollowingUsers[0].user[])
-      const combinedIDs = [...getAssignedAgents, ...getFollowingUsers, user.id];
+      const combinedIDs = [
+        ...getAssignedAgents.map((a) => a.userId),
+        ...getFollowingUsers.map((a) => a.userId),
+      ];
 
       console.log('getAssignedAgents');
       console.log(getAssignedAgents);
@@ -569,11 +557,8 @@ export class TicketService {
       console.log('combinedIDs');
       console.log(combinedIDs);
       //get unique ids only
-      const unique = (value, index, self) => {
-        return self.indexOf(value) === index;
-      };
 
-      const uniqueIDs = combinedIDs.filter(unique);
+      const uniqueIDs = [...new Set(combinedIDs)];
 
       //remove user who is commenting
       uniqueIDs.filter(function (value) {
