@@ -276,6 +276,7 @@ type Query {
   ticketAttachment(id: Int!): TicketAttachment!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
   ticketStatusCount: [TicketStatusCount!]!
+  ticketStatusCountHistory(from: Date!, statuses: [Status!], to: Date!): [TicketStatusCountHistory!]!
   tickets(
     """Paginate after opaque cursor"""
     after: String
@@ -410,7 +411,13 @@ type TicketPageInfo {
 
 type TicketStatusCount {
   count: Int!
-  status: String!
+  date: Date
+  status: Status!
+}
+
+type TicketStatusCountHistory {
+  date: Date!
+  statusCounts: [TicketStatusCount!]!
 }
 
 type User {
