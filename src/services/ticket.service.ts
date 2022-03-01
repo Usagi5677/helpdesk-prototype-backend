@@ -551,14 +551,16 @@ export class TicketService {
         ...getFollowingUsers.map((a) => a.userId),
       ];
 
-      console.log('getAssignedAgents');
-      console.log(getAssignedAgents);
-      console.log('getFollowingUsers');
-      console.log(getFollowingUsers);
-      console.log('combinedIDs');
-      console.log(combinedIDs);
+      //console.log('getAssignedAgents');
+      //console.log(getAssignedAgents);
+      //console.log('getFollowingUsers');
+      //console.log(getFollowingUsers);
+      //console.log('combinedIDs');
+      //console.log(combinedIDs);
       //get unique ids only
-
+      comment.body = `${user.fullName}(${user.rcno}) commented on ticket id: ${ticketId}`;
+      //console.log('comment');
+      //console.log(comment);
       const uniqueIDs = [...new Set(combinedIDs)];
 
       //remove user who is commenting
@@ -569,7 +571,8 @@ export class TicketService {
       for (let index = 0; index < uniqueIDs.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDs[index],
-          body: `${user.fullName}(${user.rcno}) commented on ticket id: ${ticketId}`,
+          body: `${user.fullName} (${user.rcno}) commented on ticket id: ${ticketId}`,
+          //body: body,
         });
         await this.pubSub.publish('notificationCreated', {
           notificationCreated: comment,
