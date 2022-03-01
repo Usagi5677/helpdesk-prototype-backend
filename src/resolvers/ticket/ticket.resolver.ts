@@ -3,14 +3,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import {
-  Args,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-  Subscription,
-} from '@nestjs/graphql';
+import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
@@ -25,6 +18,9 @@ import { TicketConnectionArgs } from 'src/models/args/ticket-connection.args';
 import { PrismaService } from 'nestjs-prisma';
 import { TicketStatusCount } from 'src/models/ticket-status-count';
 import { UserService } from 'src/services/user.service';
+import { TicketStatusHistoryConnectionArgs } from 'src/models/args/ticket-status-history-connection.args';
+import * as moment from 'moment';
+import { TicketStatusCountHistory } from 'src/models/ticket-status-count-history';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -338,5 +334,48 @@ export class TicketResolver {
       });
     }
     return statusCounts;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Query(() => [TicketStatusCountHistory])
+  async ticketStatusCountHistory(
+    @Args() args: TicketStatusHistoryConnectionArgs
+  ): Promise<TicketStatusCountHistory[]> {
+    let { statuses, from, to } = args;
+    const today = moment();
+    const fromDate = moment(from).startOf('day');
+    let toDate = moment(to).endOf('day');
+    if (today.isSame(toDate, 'day')) {
+      toDate.subtract(1, 'day');
+    }
+    if (!statuses || statuses.length === 0) {
+      statuses = (Object.keys(Status) as Array<keyof typeof Status>).map(
+        (s) => Status[s]
+      );
+    }
+    const statusHistory = await this.prisma.ticketStatusHistory.findMany({
+      where: {
+        status: { in: statuses },
+        createdAt: { gte: from, lte: toDate.toDate() },
+      },
+    });
+    const days = toDate.diff(fromDate, 'days') + 1;
+    const statusHistoryByDate: TicketStatusCountHistory[] = [];
+    for (let i = 0; i < days; i++) {
+      const day = fromDate.clone().add(i, 'day');
+      const statusCounts = statuses.map((status) => ({
+        status: status,
+        count:
+          statusHistory.find(
+            (sh) =>
+              moment(sh.createdAt).isSame(day, 'day') && sh.status === status
+          )?.count ?? 0,
+      }));
+      statusHistoryByDate.push({
+        date: day.toDate(),
+        statusCounts,
+      });
+    }
+    return statusHistoryByDate;
   }
 }
