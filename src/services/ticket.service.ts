@@ -533,7 +533,7 @@ export class TicketService {
       await this.pubSub.publish('commentCreated', { commentCreated: comment });
 
       //get all users involved in ticket
-      /*
+
       const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
         where: {
           ticketId: ticketId,
@@ -567,17 +567,14 @@ export class TicketService {
       });
 
       for (let index = 0; index < uniqueIDs.length; index++) {
-        await this.notificationService.createInBackground(
-          {
-            userId: uniqueIDs[index],
-            body: `User ${user.id} commented on ticket ${ticketId}`,
-          },
-          {}
-        );
+        await this.notificationService.create({
+          userId: uniqueIDs[index],
+          body: `${user.fullName}(${user.rcno}) commented on ticket id: ${ticketId}`,
+        });
         await this.pubSub.publish('notificationCreated', {
           notificationCreated: comment,
         });
-      }*/
+      }
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
