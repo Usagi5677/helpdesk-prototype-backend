@@ -38,6 +38,7 @@ model Notification {
   userId    Int
   user      User      @relation(fields: [userId], references: [id])
   body      String?
+  link      String?
   readAt    DateTime?
 }
 

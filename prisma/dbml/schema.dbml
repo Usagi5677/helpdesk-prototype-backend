@@ -28,6 +28,7 @@ Table Notification {
   userId Int [not null]
   user User [not null]
   body String
+  link String
   readAt DateTime
 }
 
