@@ -748,6 +748,7 @@ export class TicketService {
     };
   }
 
+  // Returns true if the user is an admin, agent or ticket follower.
   async hasTicketAccess(user: User, ticketId: number): Promise<boolean> {
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
@@ -763,6 +764,7 @@ export class TicketService {
     return false;
   }
 
+  // Get ticket details
   async ticket(user: User, ticketId: number): Promise<Ticket> {
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
