@@ -20,8 +20,7 @@ import { NotificationService } from './notification.service';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 import emailTemplate from 'src/common/helpers/emailTemplate';
-
-const LINK = 'https://dev-helpdesk.mtcc.com.mv/knowledgebase';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class KnowledgebaseService {
@@ -30,7 +29,8 @@ export class KnowledgebaseService {
     private userService: UserService,
     private readonly redisCacheService: RedisCacheService,
     private readonly notificationService: NotificationService,
-    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub,
+    private configService: ConfigService
   ) {}
 
   //** Create knowledgebase. */
@@ -60,7 +60,7 @@ export class KnowledgebaseService {
           text: `You have created a new <strong>knowledgebase</strong>`,
           extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
           callToAction: {
-            link: `${LINK}`,
+            link: `${this.configService.get('APP_URL')}/knowledgebase`,
             title: 'View Knowledgebase',
           },
         }),
