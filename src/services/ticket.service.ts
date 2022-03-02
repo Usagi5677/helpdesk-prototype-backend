@@ -191,8 +191,7 @@ export class TicketService {
         ...getAssignedAgents.map((a) => a.userId),
         ...getFollowingUsers.map((a) => a.userId),
       ];
-      console.log('combinedID');
-      console.log(combinedIDs);
+
       const getTicketTitle = await this.prisma.ticket.findFirst({
         where: {
           id: id,
@@ -201,8 +200,6 @@ export class TicketService {
           title: true,
         },
       });
-      ticket.body = `${user.fullName}(${user.rcno}) set status to ${status} on ticket (${id}): ${getTicketTitle.title}`;
-
       //get unique ids only
       const uniqueIDs = [...new Set(combinedIDs)];
 
@@ -630,8 +627,6 @@ export class TicketService {
       const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
         return value != user.id;
       });
-      console.log('uniqueIDsWithoutCurrentUser from comment');
-      console.log(uniqueIDsWithoutCurrentUser);
 
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
