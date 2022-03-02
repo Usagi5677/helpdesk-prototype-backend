@@ -178,14 +178,6 @@ export class TicketService {
         ...getFollowingUsers.map((a) => a.userId),
       ];
 
-      const getTicketTitle = await this.prisma.ticket.findFirst({
-        where: {
-          id: id,
-        },
-        select: {
-          title: true,
-        },
-      });
       //get unique ids only
       const uniqueIDs = [...new Set(combinedIDs)];
 
@@ -197,7 +189,7 @@ export class TicketService {
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) set priority to ${priority} on ticket (${id}): ${getTicketTitle.title}`,
+          body: `${user.fullName} (${user.rcno}) set priority to ${priority} on ticket ${id}: ${ticket.title}`,
           link: `/ticket/${id}`,
         });
       }
@@ -236,14 +228,6 @@ export class TicketService {
         ...getFollowingUsers.map((a) => a.userId),
       ];
 
-      const getTicketTitle = await this.prisma.ticket.findFirst({
-        where: {
-          id: id,
-        },
-        select: {
-          title: true,
-        },
-      });
       //get unique ids only
       const uniqueIDs = [...new Set(combinedIDs)];
 
@@ -255,7 +239,7 @@ export class TicketService {
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket (${id}): ${getTicketTitle.title}`,
+          body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket ${id}: ${ticket.title}`,
           link: `/ticket/${id}`,
           //body: body,
         });
@@ -268,7 +252,7 @@ export class TicketService {
           to: findUser.email,
           subject: `Ticket Status set to ${status}.`,
           html: emailTemplate({
-            text: `Ticket <strong>(${id})</strong>: <strong>${getTicketTitle.title}</strong> has been set to <strong>${status}.</strong>`,
+            text: `Ticket <strong>(${id})</strong>: <strong>${ticket.title}</strong> has been set to <strong>${status}.</strong>`,
             extraInfo: `Submitted by: <strong>${user.rcno} - ${user.fullName}</strong>`,
             callToAction: {
               link: `${this.configService.get('APP_URL')}/ticket/${id}`,
@@ -717,7 +701,7 @@ export class TicketService {
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) commented on ticket (${ticketId}): ${getTicketTitle.title}`,
+          body: `${user.fullName} (${user.rcno}) commented on ticket ${ticketId}: ${getTicketTitle.title}`,
           link: `/ticket/${ticketId}`,
         });
       }
