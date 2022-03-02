@@ -46,12 +46,12 @@ export class KnowledgebaseService {
           mode,
         },
       });
-      await this.pubSub.publish('notificationCreated', {
-        notificationCreated: notif,
-      });
-      await this.notificationService.createInBackground({
+      await this.notificationService.create({
         userId: user.id,
         body: body,
+      });
+      await this.pubSub.publish('notificationCreated', {
+        notificationCreated: notif,
       });
     } catch (e) {
       console.log(e);
