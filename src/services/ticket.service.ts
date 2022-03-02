@@ -597,6 +597,52 @@ export class TicketService {
           ? { completedById: user.id, completedAt: new Date() }
           : { completedById: null, completedAt: null },
       });
+
+      //get all users involved in ticket
+      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
+        where: {
+          ticketId: id,
+        },
+      });
+      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
+        where: {
+          ticketId: id,
+        },
+      });
+
+      //combine the id's
+      const combinedIDs = [
+        ...getAssignedAgents.map((a) => a.userId),
+        ...getFollowingUsers.map((a) => a.userId),
+      ];
+
+      //get unique ids only
+      const uniqueIDs = [...new Set(combinedIDs)];
+
+      //remove user who is commenting
+      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
+        return value != user.id;
+      });
+
+      const getTicketTitle = await this.prisma.ticket.findFirst({
+        where: {
+          id: id,
+        },
+        select: {
+          title: true,
+        },
+      });
+      let completed = 'pending';
+      if (complete) {
+        completed = 'completed';
+      }
+      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+        await this.notificationService.create({
+          userId: uniqueIDsWithoutCurrentUser[index],
+          body: `${user.fullName} (${user.rcno}) set ${completed} on ${checkListItem.description}  in ticket (${id}): ${getTicketTitle.title}`,
+          link: `/ticket/${id}`,
+        });
+      }
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
