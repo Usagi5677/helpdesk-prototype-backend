@@ -198,7 +198,7 @@ export class TicketService {
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) set status to ${priority} on ticket (${id}): ${getTicketTitle.title}`,
+          body: `${user.fullName} (${user.rcno}) set priority to ${priority} on ticket (${id}): ${getTicketTitle.title}`,
           link: `/ticket/${id}`,
         });
       }
