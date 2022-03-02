@@ -218,6 +218,23 @@ export class TicketService {
           link: `/ticket/${id}`,
           //body: body,
         });
+        const findUser = await this.prisma.user.findFirst({
+          where: {
+            id: uniqueIDsWithoutCurrentUser[index],
+          },
+        });
+        await this.notificationService.sendEmailInBackground({
+          to: 'ibrahim.naish@mtcc.com.mv',
+          subject: `Ticket Status set to ${status}.`,
+          html: emailTemplate({
+            text: `Hello ${findUser.fullName}, <br /><br />Ticket <strong>(${id})</strong>: <strong>${getTicketTitle.title}</strong> has been set to <strong>${status}.</strong>`,
+            extraInfo: `Submitted by: <strong>${user.rcno} - ${user.fullName}</strong>`,
+            callToAction: {
+              link: `https://dev-helpdesk.mtcc.com.mv/ticket/${id}`,
+              title: 'View Ticket',
+            },
+          }),
+        });
       }
     } catch (e) {
       console.log(e);

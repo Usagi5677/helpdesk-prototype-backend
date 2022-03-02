@@ -56,6 +56,11 @@ export class KnowledgebaseService {
         subject: 'Knowledgebase created',
         html: emailTemplate({
           text: `Hello ${user.fullName}, <br /><br />You have created a new <strong>knowledgebase</strong>`,
+          extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
+          callToAction: {
+            link: `https://dev-helpdesk.mtcc.com.mv/knowledgebase`,
+            title: 'View Knowledgebase',
+          },
         }),
       });
     } catch (e) {
