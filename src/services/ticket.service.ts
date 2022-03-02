@@ -311,14 +311,6 @@ export class TicketService {
         ...getFollowingUsers.map((a) => a.userId),
       ];
 
-      const getTicketTitle = await this.prisma.ticket.findFirst({
-        where: {
-          id: id,
-        },
-        select: {
-          title: true,
-        },
-      });
       //get unique ids only
       const uniqueIDs = [...new Set(combinedIDs)];
 
@@ -330,7 +322,7 @@ export class TicketService {
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) gave rating of ${rating}/5 on ticket (${id}): ${getTicketTitle.title}`,
+          body: `${user.fullName} (${user.rcno}) gave rating of ${rating}/5 on ticket (${id}): ${ticket.title}`,
           link: `/ticket/${id}`,
         });
       }
