@@ -159,36 +159,10 @@ export class TicketService {
       const commentBody = `Ticket priority set to ${priority}.`;
       await this.createComment(user, ticket.id, commentBody, 'Action');
 
-      //get all users involved in ticket
-
-      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
-        where: {
-          ticketId: id,
-        },
-      });
-      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
-        where: {
-          ticketId: id,
-        },
-      });
-
-      //combine the id's
-      const combinedIDs = [
-        ...getAssignedAgents.map((a) => a.userId),
-        ...getFollowingUsers.map((a) => a.userId),
-      ];
-
-      //get unique ids only
-      const uniqueIDs = [...new Set(combinedIDs)];
-
-      //remove user who is commenting
-      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
-        return value != user.id;
-      });
-
-      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+      const ticketUsers = await this.getTicketUserIds(id, user.id);
+      for (let index = 0; index < ticketUsers.length; index++) {
         await this.notificationService.create({
-          userId: uniqueIDsWithoutCurrentUser[index],
+          userId: ticketUsers[index],
           body: `${user.fullName} (${user.rcno}) set priority to ${priority} on ticket ${id}: ${ticket.title}`,
           link: `/ticket/${id}`,
         });
@@ -209,43 +183,17 @@ export class TicketService {
       const commentBody = `Ticket status set to ${status}.`;
       await this.createComment(user, ticket.id, commentBody, 'Action');
 
-      //get all users involved in ticket
-
-      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
-        where: {
-          ticketId: id,
-        },
-      });
-      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
-        where: {
-          ticketId: id,
-        },
-      });
-
-      //combine the id's
-      const combinedIDs = [
-        ...getAssignedAgents.map((a) => a.userId),
-        ...getFollowingUsers.map((a) => a.userId),
-      ];
-
-      //get unique ids only
-      const uniqueIDs = [...new Set(combinedIDs)];
-
-      //remove user who is commenting
-      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
-        return value != user.id;
-      });
-
-      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+      const ticketUsers = await this.getTicketUserIds(id, user.id);
+      for (let index = 0; index < ticketUsers.length; index++) {
         await this.notificationService.create({
-          userId: uniqueIDsWithoutCurrentUser[index],
+          userId: ticketUsers[index],
           body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket ${id}: ${ticket.title}`,
           link: `/ticket/${id}`,
           //body: body,
         });
         const findUser = await this.prisma.user.findFirst({
           where: {
-            id: uniqueIDsWithoutCurrentUser[index],
+            id: ticketUsers[index],
           },
         });
         await this.notificationService.sendEmailInBackground({
@@ -293,35 +241,10 @@ export class TicketService {
       } ${feedback} rating:${rating}`;
       await this.createComment(user, ticket.id, commentBody, 'Action');
 
-      //get all users involved in ticket
-      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
-        where: {
-          ticketId: id,
-        },
-      });
-      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
-        where: {
-          ticketId: id,
-        },
-      });
-
-      //combine the id's
-      const combinedIDs = [
-        ...getAssignedAgents.map((a) => a.userId),
-        ...getFollowingUsers.map((a) => a.userId),
-      ];
-
-      //get unique ids only
-      const uniqueIDs = [...new Set(combinedIDs)];
-
-      //remove user who is commenting
-      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
-        return value != user.id;
-      });
-
-      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+      const ticketUsers = await this.getTicketUserIds(id, user.id);
+      for (let index = 0; index < ticketUsers.length; index++) {
         await this.notificationService.create({
-          userId: uniqueIDsWithoutCurrentUser[index],
+          userId: ticketUsers[index],
           body: `${user.fullName} (${user.rcno}) gave rating of ${rating}/5 on ticket (${id}): ${ticket.title}`,
           link: `/ticket/${id}`,
         });
@@ -599,39 +522,17 @@ export class TicketService {
           : { completedById: null, completedAt: null },
       });
 
-      //get all users involved in ticket
-      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
-        where: {
-          ticketId: checkListItem.ticketId,
-        },
-      });
-      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
-        where: {
-          ticketId: checkListItem.ticketId,
-        },
-      });
-
-      //combine the id's
-      const combinedIDs = [
-        ...getAssignedAgents.map((a) => a.userId),
-        ...getFollowingUsers.map((a) => a.userId),
-      ];
-
-      //get unique ids only
-      const uniqueIDs = [...new Set(combinedIDs)];
-
-      //remove user who is commenting
-      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
-        return value != user.id;
-      });
-
+      const ticketUsers = await this.getTicketUserIds(
+        checkListItem.ticketId,
+        user.id
+      );
       let completed = 'pending';
       if (complete) {
         completed = 'completed';
       }
-      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+      for (let index = 0; index < ticketUsers.length; index++) {
         await this.notificationService.create({
-          userId: uniqueIDsWithoutCurrentUser[index],
+          userId: ticketUsers[index],
           body: `${user.fullName} (${user.rcno}) set ${completed} on ${checkListItem.description}  in ticket (${id}): ${checkListItem.ticket.title}`,
           link: `/ticket/${id}`,
         });
@@ -694,36 +595,10 @@ export class TicketService {
       });
       await this.pubSub.publish('commentCreated', { commentCreated: comment });
 
-      //get all users involved in ticket
-
-      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
-        where: {
-          ticketId: ticketId,
-        },
-      });
-      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
-        where: {
-          ticketId: ticketId,
-        },
-      });
-
-      //combine the id's
-      const combinedIDs = [
-        ...getAssignedAgents.map((a) => a.userId),
-        ...getFollowingUsers.map((a) => a.userId),
-      ];
-
-      //get unique ids only
-      const uniqueIDs = [...new Set(combinedIDs)];
-
-      //remove user who is commenting
-      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
-        return value != user.id;
-      });
-
-      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+      const ticketUsers = await this.getTicketUserIds(ticketId, user.id);
+      for (let index = 0; index < ticketUsers.length; index++) {
         await this.notificationService.create({
-          userId: uniqueIDsWithoutCurrentUser[index],
+          userId: ticketUsers[index],
           body: `${user.fullName} (${user.rcno}) commented on ticket ${ticketId}: ${comment.ticket.title}`,
           link: `/ticket/${ticketId}`,
         });
@@ -980,6 +855,43 @@ export class TicketService {
     }
     await this.prisma.ticketStatusHistory.createMany({
       data: statusCounts.map((sc) => ({ status: sc.status, count: sc.count })),
+    });
+  }
+
+  // Get unique array of ids of ticket followers and assigned agents
+  async getTicketUserIds(
+    ticketId: number,
+    removeUserId?: number
+  ): Promise<number[]> {
+    // get all users involved in ticket
+    const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
+      where: {
+        ticketId: ticketId,
+      },
+    });
+    const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
+      where: {
+        ticketId: ticketId,
+      },
+    });
+
+    // combine the ids
+    const combinedIDs = [
+      ...getAssignedAgents.map((a) => a.userId),
+      ...getFollowingUsers.map((a) => a.userId),
+    ];
+
+    // get unique ids only
+    const unique = [...new Set(combinedIDs)];
+
+    // If removeUserId variable has not been passed, return array
+    if (!removeUserId) {
+      return unique;
+    }
+
+    // Otherwise remove the given user id from array and then return
+    return unique.filter((id) => {
+      return id != removeUserId;
     });
   }
 }
