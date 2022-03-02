@@ -54,16 +54,14 @@ export class NotificationService {
   }
 
   async sendEmail(options: SendMailOptions) {
-    const to = [...((options.to as any[]) ?? [])];
-
-    // Don't send email for now
-    return;
-    if (to.length > 0) {
+    //const to = [...((options.to as any[]) ?? [])];
+    //return;
+    if (options.to.length > 0) {
       await this.transporter.sendMail({
         ...options,
         from: `"Helpdesk" <no-reply@mtcc.com.mv>`,
-        to,
-        subject: options.subject ? `Helpdesk: ${options.subject}` : undefined,
+        //to: options.to,
+        //subject: options.subject ? `Helpdesk: ${options.subject}` : undefined,
       });
     }
   }

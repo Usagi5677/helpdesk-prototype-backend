@@ -19,6 +19,7 @@ import { Knowledgebase } from 'src/models/knowledgebase.model';
 import { NotificationService } from './notification.service';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
+import emailTemplate from 'src/common/helpers/emailTemplate';
 
 @Injectable()
 export class KnowledgebaseService {
@@ -49,6 +50,13 @@ export class KnowledgebaseService {
       await this.notificationService.create({
         userId: user.id,
         body: body,
+      });
+      await this.notificationService.sendEmail({
+        to: 'ibrahim.naish@mtcc.com.mv',
+        subject: 'Knowledgebase created',
+        html: emailTemplate({
+          text: `Hello ${user.fullName}, <br /><br />You have created a new <strong>knowledgebase</strong>`,
+        }),
       });
       await this.pubSub.publish('notificationCreated', {
         notificationCreated: notif,
