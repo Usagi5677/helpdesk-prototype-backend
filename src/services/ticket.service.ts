@@ -159,6 +159,49 @@ export class TicketService {
       });
       const commentBody = `Ticket priority set to ${priority}.`;
       await this.createComment(user, ticket.id, commentBody, 'Action');
+
+      //get all users involved in ticket
+
+      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
+        where: {
+          ticketId: id,
+        },
+      });
+      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
+        where: {
+          ticketId: id,
+        },
+      });
+
+      //combine the id's
+      const combinedIDs = [
+        ...getAssignedAgents.map((a) => a.userId),
+        ...getFollowingUsers.map((a) => a.userId),
+      ];
+
+      const getTicketTitle = await this.prisma.ticket.findFirst({
+        where: {
+          id: id,
+        },
+        select: {
+          title: true,
+        },
+      });
+      //get unique ids only
+      const uniqueIDs = [...new Set(combinedIDs)];
+
+      //remove user who is commenting
+      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
+        return value != user.id;
+      });
+
+      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+        await this.notificationService.create({
+          userId: uniqueIDsWithoutCurrentUser[index],
+          body: `${user.fullName} (${user.rcno}) set status to ${priority} on ticket (${id}): ${getTicketTitle.title}`,
+          link: `/ticket/${id}`,
+        });
+      }
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -226,7 +269,7 @@ export class TicketService {
           to: findUser.email,
           subject: `Ticket Status set to ${status}.`,
           html: emailTemplate({
-            text: `Hello ${findUser.fullName}, <br /><br />Ticket <strong>(${id})</strong>: <strong>${getTicketTitle.title}</strong> has been set to <strong>${status}.</strong>`,
+            text: `Ticket <strong>(${id})</strong>: <strong>${getTicketTitle.title}</strong> has been set to <strong>${status}.</strong>`,
             extraInfo: `Submitted by: <strong>${user.rcno} - ${user.fullName}</strong>`,
             callToAction: {
               link: `${LINK}/${id}`,

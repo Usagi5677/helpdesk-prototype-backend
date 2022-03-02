@@ -57,7 +57,7 @@ export class KnowledgebaseService {
         to: 'ibrahim.naish@mtcc.com.mv',
         subject: 'Knowledgebase created',
         html: emailTemplate({
-          text: `Hello ${user.fullName}, <br /><br />You have created a new <strong>knowledgebase</strong>`,
+          text: `You have created a new <strong>knowledgebase</strong>`,
           extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
           callToAction: {
             link: `${LINK}`,
