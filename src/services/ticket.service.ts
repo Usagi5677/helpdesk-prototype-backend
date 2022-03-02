@@ -224,7 +224,7 @@ export class TicketService {
           },
         });
         await this.notificationService.sendEmailInBackground({
-          to: 'ibrahim.naish@mtcc.com.mv',
+          to: findUser.email,
           subject: `Ticket Status set to ${status}.`,
           html: emailTemplate({
             text: `Hello ${findUser.fullName}, <br /><br />Ticket <strong>(${id})</strong>: <strong>${getTicketTitle.title}</strong> has been set to <strong>${status}.</strong>`,
