@@ -584,6 +584,7 @@ export class TicketService {
   async toggleChecklistItem(user: User, id: number, complete: boolean) {
     const checkListItem = await this.prisma.checklistItem.findFirst({
       where: { id },
+      include: { ticket: true },
     });
     const isAdminOrAssigned = await this.isAdminOrAssignedToTicket(
       user.id,
@@ -624,14 +625,6 @@ export class TicketService {
         return value != user.id;
       });
 
-      const getTicketTitle = await this.prisma.ticket.findFirst({
-        where: {
-          id: checkListItem.ticketId,
-        },
-        select: {
-          title: true,
-        },
-      });
       let completed = 'pending';
       if (complete) {
         completed = 'completed';
@@ -639,7 +632,7 @@ export class TicketService {
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) set ${completed} on ${checkListItem.description}  in ticket (${id}): ${getTicketTitle.title}`,
+          body: `${user.fullName} (${user.rcno}) set ${completed} on ${checkListItem.description}  in ticket (${id}): ${checkListItem.ticket.title}`,
           link: `/ticket/${id}`,
         });
       }
@@ -697,7 +690,7 @@ export class TicketService {
           body,
           mode,
         },
-        include: { user: true },
+        include: { user: true, ticket: true },
       });
       await this.pubSub.publish('commentCreated', { commentCreated: comment });
 
@@ -720,14 +713,6 @@ export class TicketService {
         ...getFollowingUsers.map((a) => a.userId),
       ];
 
-      const getTicketTitle = await this.prisma.ticket.findFirst({
-        where: {
-          id: ticketId,
-        },
-        select: {
-          title: true,
-        },
-      });
       //get unique ids only
       const uniqueIDs = [...new Set(combinedIDs)];
 
@@ -739,7 +724,7 @@ export class TicketService {
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
-          body: `${user.fullName} (${user.rcno}) commented on ticket ${ticketId}: ${getTicketTitle.title}`,
+          body: `${user.fullName} (${user.rcno}) commented on ticket ${ticketId}: ${comment.ticket.title}`,
           link: `/ticket/${ticketId}`,
         });
       }
