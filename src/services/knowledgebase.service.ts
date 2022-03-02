@@ -21,6 +21,8 @@ import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 import emailTemplate from 'src/common/helpers/emailTemplate';
 
+const LINK = 'https://dev-helpdesk.mtcc.com.mv/knowledgebase';
+
 @Injectable()
 export class KnowledgebaseService {
   constructor(
@@ -58,7 +60,7 @@ export class KnowledgebaseService {
           text: `Hello ${user.fullName}, <br /><br />You have created a new <strong>knowledgebase</strong>`,
           extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
           callToAction: {
-            link: `https://dev-helpdesk.mtcc.com.mv/knowledgebase`,
+            link: `${LINK}`,
             title: 'View Knowledgebase',
           },
         }),

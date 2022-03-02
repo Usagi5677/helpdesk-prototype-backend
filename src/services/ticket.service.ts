@@ -30,6 +30,8 @@ import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 import { Cron } from '@nestjs/schedule';
 import { TicketStatusCount } from 'src/models/ticket-status-count';
 
+const LINK = 'https://dev-helpdesk.mtcc.com.mv/ticket';
+
 @Injectable()
 export class TicketService {
   private readonly logger = new Logger(TicketService.name);
@@ -227,7 +229,7 @@ export class TicketService {
             text: `Hello ${findUser.fullName}, <br /><br />Ticket <strong>(${id})</strong>: <strong>${getTicketTitle.title}</strong> has been set to <strong>${status}.</strong>`,
             extraInfo: `Submitted by: <strong>${user.rcno} - ${user.fullName}</strong>`,
             callToAction: {
-              link: `https://dev-helpdesk.mtcc.com.mv/ticket/${id}`,
+              link: `${LINK}/${id}`,
               title: 'View Ticket',
             },
           }),
