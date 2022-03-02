@@ -521,21 +521,18 @@ export class TicketService {
           ? { completedById: user.id, completedAt: new Date() }
           : { completedById: null, completedAt: null },
       });
-
-      const ticketUsers = await this.getTicketUserIds(
-        checkListItem.ticketId,
-        user.id
-      );
-      let completed = 'pending';
       if (complete) {
-        completed = 'completed';
-      }
-      for (let index = 0; index < ticketUsers.length; index++) {
-        await this.notificationService.create({
-          userId: ticketUsers[index],
-          body: `${user.fullName} (${user.rcno}) set ${completed} on ${checkListItem.description}  in ticket (${id}): ${checkListItem.ticket.title}`,
-          link: `/ticket/${id}`,
-        });
+        const ticketUsers = await this.getTicketUserIds(
+          checkListItem.ticketId,
+          user.id
+        );
+        for (let index = 0; index < ticketUsers.length; index++) {
+          await this.notificationService.create({
+            userId: ticketUsers[index],
+            body: `${user.fullName} (${user.rcno}) completed checklist item:${checkListItem.description} on ticket ${id}: ${checkListItem.ticket.title}`,
+            link: `/ticket/${id}`,
+          });
+        }
       }
     } catch (e) {
       console.log(e);
