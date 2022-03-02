@@ -29,9 +29,7 @@ import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 import { Cron } from '@nestjs/schedule';
 import { TicketStatusCount } from 'src/models/ticket-status-count';
-
-const LINK = 'https://dev-helpdesk.mtcc.com.mv/ticket';
-
+import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class TicketService {
   private readonly logger = new Logger(TicketService.name);
@@ -40,7 +38,8 @@ export class TicketService {
     private userService: UserService,
     private notificationService: NotificationService,
     private readonly redisCacheService: RedisCacheService,
-    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub,
+    private configService: ConfigService
   ) {}
 
   //** Create category. */
@@ -272,7 +271,7 @@ export class TicketService {
             text: `Ticket <strong>(${id})</strong>: <strong>${getTicketTitle.title}</strong> has been set to <strong>${status}.</strong>`,
             extraInfo: `Submitted by: <strong>${user.rcno} - ${user.fullName}</strong>`,
             callToAction: {
-              link: `${LINK}/${id}`,
+              link: `${this.configService.get('APP_URL')}/ticket/${id}`,
               title: 'View Ticket',
             },
           }),
