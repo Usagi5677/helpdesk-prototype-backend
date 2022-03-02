@@ -601,12 +601,12 @@ export class TicketService {
       //get all users involved in ticket
       const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
         where: {
-          ticketId: id,
+          ticketId: checkListItem.ticketId,
         },
       });
       const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
         where: {
-          ticketId: id,
+          ticketId: checkListItem.ticketId,
         },
       });
 
@@ -626,7 +626,7 @@ export class TicketService {
 
       const getTicketTitle = await this.prisma.ticket.findFirst({
         where: {
-          id: id,
+          id: checkListItem.ticketId,
         },
         select: {
           title: true,
