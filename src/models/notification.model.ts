@@ -8,4 +8,5 @@ export class Notification extends BaseModel {
   body: string;
   readAt?: Date;
   link?: string;
+  userId: number;
 }

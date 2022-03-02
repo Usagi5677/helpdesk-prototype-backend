@@ -6,6 +6,8 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { PrismaService } from '../prisma/prisma.service';
 import { Nodemailer } from '../resolvers/notification/notification.provider';
 import { PubSub } from 'graphql-subscriptions';
+import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
 
 export interface Notification {
   userId: number;
@@ -22,7 +24,8 @@ export class NotificationService {
   constructor(
     @Inject(Nodemailer) private nodemailer: typeof nm,
     @InjectQueue('notification') private notificationQueue: Queue,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {
     this.transporter = this.nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -39,7 +42,7 @@ export class NotificationService {
   }
 
   async create(notification: Notification, emailOptions?: SendMailOptions) {
-    await this.prisma.notification.create({
+    const notif = await this.prisma.notification.create({
       data: {
         body: notification.body,
         userId: notification.userId,
@@ -51,6 +54,9 @@ export class NotificationService {
     if (emailOptions) {
       this.sendEmail(emailOptions);
     }
+    await this.pubSub.publish('notificationCreated', {
+      notificationCreated: notif,
+    });
   }
 
   async sendEmail(options: SendMailOptions) {

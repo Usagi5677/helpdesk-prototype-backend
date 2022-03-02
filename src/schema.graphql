@@ -115,6 +115,7 @@ type Notification {
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
   user: User!
+  userId: Int!
 }
 
 type PaginatedCategory {

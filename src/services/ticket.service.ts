@@ -172,6 +172,53 @@ export class TicketService {
       });
       const commentBody = `Ticket status set to ${status}.`;
       await this.createComment(user, ticket.id, commentBody, 'Action');
+
+      //get all users involved in ticket
+
+      const getAssignedAgents = await this.prisma.ticketAssignment.findMany({
+        where: {
+          ticketId: id,
+        },
+      });
+      const getFollowingUsers = await this.prisma.ticketFollowing.findMany({
+        where: {
+          ticketId: id,
+        },
+      });
+
+      //combine the id's
+      const combinedIDs = [
+        ...getAssignedAgents.map((a) => a.userId),
+        ...getFollowingUsers.map((a) => a.userId),
+      ];
+      console.log('combinedID');
+      console.log(combinedIDs);
+      const getTicketTitle = await this.prisma.ticket.findFirst({
+        where: {
+          id: id,
+        },
+        select: {
+          title: true,
+        },
+      });
+      ticket.body = `${user.fullName}(${user.rcno}) set status to ${status} on ticket (${id}): ${getTicketTitle.title}`;
+
+      //get unique ids only
+      const uniqueIDs = [...new Set(combinedIDs)];
+
+      //remove user who is commenting
+      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
+        return value != user.id;
+      });
+
+      for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
+        await this.notificationService.create({
+          userId: uniqueIDsWithoutCurrentUser[index],
+          body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket (${id}): ${getTicketTitle.title}`,
+          link: `/ticket/${id}`,
+          //body: body,
+        });
+      }
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -551,24 +598,6 @@ export class TicketService {
         ...getFollowingUsers.map((a) => a.userId),
       ];
 
-      //console.log('getAssignedAgents');
-      //console.log(getAssignedAgents);
-      //console.log('getFollowingUsers');
-      //console.log(getFollowingUsers);
-      //console.log('combinedIDs');
-      //console.log(combinedIDs);
-      //get unique ids only
-      comment.body = `${user.fullName}(${user.rcno}) commented on ticket id: ${ticketId}`;
-      //console.log('comment');
-      //console.log(comment);
-      const uniqueIDs = [...new Set(combinedIDs)];
-
-      //remove user who is commenting
-      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
-        return value != user.id;
-      });
-      //console.log('uniqueIDwithoutCurrentUser');
-      //console.log(uniqueIDsWithoutCurrentUser);
       const getTicketTitle = await this.prisma.ticket.findFirst({
         where: {
           id: ticketId,
@@ -577,15 +606,21 @@ export class TicketService {
           title: true,
         },
       });
+      //get unique ids only
+      const uniqueIDs = [...new Set(combinedIDs)];
+
+      //remove user who is commenting
+      const uniqueIDsWithoutCurrentUser = uniqueIDs.filter(function (value) {
+        return value != user.id;
+      });
+      console.log('uniqueIDsWithoutCurrentUser from comment');
+      console.log(uniqueIDsWithoutCurrentUser);
+
       for (let index = 0; index < uniqueIDsWithoutCurrentUser.length; index++) {
         await this.notificationService.create({
           userId: uniqueIDsWithoutCurrentUser[index],
           body: `${user.fullName} (${user.rcno}) commented on ticket (${ticketId}): ${getTicketTitle.title}`,
           link: `/ticket/${ticketId}`,
-          //body: body,
-        });
-        await this.pubSub.publish('notificationCreated', {
-          notificationCreated: comment,
         });
       }
     } catch (e) {

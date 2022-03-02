@@ -39,7 +39,7 @@ export class KnowledgebaseService {
     mode: string
   ) {
     try {
-      const notif = await this.prisma.information.create({
+      await this.prisma.information.create({
         data: {
           createdById: user.id,
           title,
@@ -51,15 +51,12 @@ export class KnowledgebaseService {
         userId: user.id,
         body: body,
       });
-      await this.notificationService.sendEmail({
+      await this.notificationService.sendEmailInBackground({
         to: 'ibrahim.naish@mtcc.com.mv',
         subject: 'Knowledgebase created',
         html: emailTemplate({
           text: `Hello ${user.fullName}, <br /><br />You have created a new <strong>knowledgebase</strong>`,
         }),
-      });
-      await this.pubSub.publish('notificationCreated', {
-        notificationCreated: notif,
       });
     } catch (e) {
       console.log(e);
