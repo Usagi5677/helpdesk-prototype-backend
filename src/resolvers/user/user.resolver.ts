@@ -63,7 +63,6 @@ export class UserResolver {
     @Args('roles', { type: () => [RoleEnum] }) roles: RoleEnum[]
   ): Promise<string> {
     await this.userService.addAppUser(userId, roles);
-    await this.redisCacheService.del(`user-uuid-${userId}`);
     return 'App user added.';
   }
 
@@ -75,7 +74,7 @@ export class UserResolver {
     @Args('role', { type: () => RoleEnum }) role: RoleEnum
   ): Promise<string> {
     await this.prisma.userRole.deleteMany({ where: { userId, role } });
-    await this.redisCacheService.del(`user-uuid-${userId}`);
+    await this.redisCacheService.del(`roles-${userId}`);
     return 'User role removed.';
   }
 
