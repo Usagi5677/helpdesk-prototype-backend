@@ -23,7 +23,7 @@ export class NotificationService {
 
   constructor(
     @Inject(Nodemailer) private nodemailer: typeof nm,
-    @InjectQueue('notification') private notificationQueue: Queue,
+    @InjectQueue('helpdesk-notification') private notificationQueue: Queue,
     private readonly prisma: PrismaService,
     @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {

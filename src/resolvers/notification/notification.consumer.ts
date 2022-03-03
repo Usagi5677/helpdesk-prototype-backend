@@ -7,7 +7,7 @@ import {
 } from '../../services/notification.service';
 import { SendMailOptions } from 'nodemailer';
 
-@Processor('notification')
+@Processor('helpdesk-notification')
 export class NotificationConsumer {
   private readonly logger = new Logger(NotificationConsumer.name);
 
