@@ -382,6 +382,34 @@ export class TicketService {
           isOwner: ownerExists ? false : index === 0 ? true : false,
         })),
       });
+      const ticketUsers = await this.getTicketUserIds(ticketId, user.id);
+      const newTicketUsers = ticketUsers.filter((id) => {
+        return id != agentIds[agentIds.length - 1];
+      });
+      const getTicketTitle = await this.prisma.ticket.findFirst({
+        where: {
+          id: ticketId,
+        },
+        select: {
+          title: true,
+        },
+      });
+      const getUser = await this.prisma.user.findFirst({
+        where: {
+          id: agentIds[agentIds.length - 1],
+        },
+        select: {
+          fullName: true,
+          rcno: true,
+        },
+      });
+      for (let index = 0; index < newTicketUsers.length; index++) {
+        await this.notificationService.create({
+          userId: newTicketUsers[index],
+          body: `${user.fullName} (${user.rcno}) assigned ${getUser.fullName} (${getUser.rcno}) to ticket ${ticketId}: ${getTicketTitle.title}`,
+          link: `/ticket/${ticketId}`,
+        });
+      }
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
