@@ -49,7 +49,6 @@ export class NotificationService {
         link: notification.link,
       },
     });
-    //console.log(notif);
 
     if (emailOptions) {
       this.sendEmail(emailOptions);

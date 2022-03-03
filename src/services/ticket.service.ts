@@ -185,29 +185,35 @@ export class TicketService {
 
       const ticketUsers = await this.getTicketUserIds(id, user.id);
       for (let index = 0; index < ticketUsers.length; index++) {
-        await this.notificationService.create({
-          userId: ticketUsers[index],
-          body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket ${id}: ${ticket.title}`,
-          link: `/ticket/${id}`,
-          //body: body,
-        });
+        // await this.notificationService.create({
+        //   userId: ticketUsers[index],
+        //   body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket ${id}: ${ticket.title}`,
+        //   link: `/ticket/${id}`,
+        // });
         const findUser = await this.prisma.user.findFirst({
           where: {
             id: ticketUsers[index],
           },
         });
-        await this.notificationService.sendEmailInBackground({
-          to: findUser.email,
-          subject: `Ticket Status set to ${status}.`,
-          html: emailTemplate({
-            text: `Ticket <strong>(${id})</strong>: <strong>${ticket.title}</strong> has been set to <strong>${status}.</strong>`,
-            extraInfo: `Submitted by: <strong>${user.rcno} - ${user.fullName}</strong>`,
-            callToAction: {
-              link: `${this.configService.get('APP_URL')}/ticket/${id}`,
-              title: 'View Ticket',
-            },
-          }),
-        });
+        await this.notificationService.createInBackground(
+          {
+            userId: ticketUsers[index],
+            body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket ${id}: ${ticket.title}`,
+            link: `/ticket/${id}`,
+          },
+          {
+            to: findUser.email,
+            subject: `Ticket status set to ${status}.`,
+            html: emailTemplate({
+              text: `Ticket <strong>${id}</strong>: <strong>${ticket.title}</strong> has been set to <strong>${status}.</strong>`,
+              extraInfo: `By: <strong>${user.fullName} (${user.rcno})</strong>`,
+              callToAction: {
+                link: `${this.configService.get('APP_URL')}/ticket/${id}`,
+                title: 'View Ticket',
+              },
+            }),
+          }
+        );
       }
     } catch (e) {
       console.log(e);
@@ -278,25 +284,25 @@ export class TicketService {
       });
       const commentBody = `Added ${newFollower.fullName} (${newFollower.rcno}) as a ticket follower.`;
       await this.createComment(user, ticketId, commentBody, 'Action');
-      // const body = `${user.fullName} has added you to a ticket.`;
-      // await this.notificationService.createInBackground(
-      //   {
-      //     userId: newFollower.id,
-      //     body,
-      //   },
-      //   {
-      //     to: [newFollower.email],
-      //     subject: `Added to ticket`,
-      //     html: emailTemplate({
-      //       text: body,
-      //       // extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
-      //       // callToAction: {
-      //       //   link: `${process.env.APP_URL}/cases/${docOnCase.case.id}/#documents`,
-      //       //   title: 'View Case Documents',
-      //       // },
-      //     }),
-      //   }
-      // );
+      const body = `${user.fullName} has added you as a follower to ticket ${ticketId}: ${ticket.title}.`;
+      await this.notificationService.createInBackground(
+        {
+          userId: newFollower.id,
+          body,
+        },
+        {
+          to: [newFollower.email],
+          subject: `Added as ticket follower`,
+          html: emailTemplate({
+            text: body,
+            extraInfo: `By: <strong>${user.fullName} (${user.rcno})</strong>`,
+            callToAction: {
+              link: `${this.configService.get('APP_URL')}/ticket/${ticketId}`,
+              title: 'View Ticket',
+            },
+          }),
+        }
+      );
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
