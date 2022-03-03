@@ -598,13 +598,15 @@ export class TicketService {
       });
       await this.pubSub.publish('commentCreated', { commentCreated: comment });
 
-      const ticketUsers = await this.getTicketUserIds(ticketId, user.id);
-      for (let index = 0; index < ticketUsers.length; index++) {
-        await this.notificationService.create({
-          userId: ticketUsers[index],
-          body: `${user.fullName} (${user.rcno}) commented on ticket ${ticketId}: ${comment.ticket.title}`,
-          link: `/ticket/${ticketId}`,
-        });
+      if (mode === 'Public' || mode === 'Private') {
+        const ticketUsers = await this.getTicketUserIds(ticketId, user.id);
+        for (let index = 0; index < ticketUsers.length; index++) {
+          await this.notificationService.create({
+            userId: ticketUsers[index],
+            body: `${user.fullName} (${user.rcno}) commented on ticket ${ticketId}: ${comment.ticket.title}`,
+            link: `/ticket/${ticketId}`,
+          });
+        }
       }
     } catch (e) {
       console.log(e);
