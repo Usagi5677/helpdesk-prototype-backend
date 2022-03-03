@@ -1,5 +1,5 @@
 import { UserResolver } from './user.resolver';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UserService } from '../../services/user.service';
 import { RedisCacheModule } from 'src/redisCache.module';
 import { UserGroupResolver } from './user-group.resolver';
@@ -8,7 +8,7 @@ import { APSService } from 'src/services/aps.service';
 import { APSModule } from '../profile/profile.module';
 
 @Module({
-  imports: [RedisCacheModule, RedisCacheModule, APSModule],
+  imports: [forwardRef(() => RedisCacheModule), forwardRef(() => APSModule)],
   providers: [
     UserResolver,
     UserGroupResolver,

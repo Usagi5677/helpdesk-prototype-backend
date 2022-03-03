@@ -2,6 +2,11 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AgentQueue {
+  agent: User!
+  tickets: [Ticket!]!
+}
+
 type Category {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
@@ -161,6 +166,7 @@ type Profile {
 }
 
 type Query {
+  agentQueue: [AgentQueue!]!
   appUsers: [User!]!
   assignedTickets(
     """Paginate after opaque cursor"""

@@ -22,6 +22,7 @@ import { TicketStatusHistoryConnectionArgs } from 'src/models/args/ticket-status
 import * as moment from 'moment';
 import { TicketStatusCountHistory } from 'src/models/ticket-status-count-history';
 import { RedisCacheService } from 'src/redisCache.service';
+import { AgentQueue } from 'src/models/agent-queue.model';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -401,5 +402,37 @@ export class TicketResolver {
       );
     }
     return statusHistoryByDate;
+  }
+
+  @Roles('Admin', 'Agent')
+  @Query(() => [AgentQueue])
+  async agentQueue(): Promise<AgentQueue[]> {
+    let agentQueue = await this.redisCacheService.get(`agentQueue`);
+    if (!agentQueue) {
+      agentQueue = [];
+      const activeTickets = await this.prisma.ticket.findMany({
+        where: {
+          status: { in: ['Pending', 'Open', 'Reopened'] },
+        },
+        include: { ticketAssignments: true },
+      });
+      const allAgents = await this.prisma.user.findMany({
+        where: { roles: { some: { role: 'Agent' } } },
+      });
+      allAgents.forEach((agent) => {
+        const tickets = activeTickets.filter((ticket) => {
+          const ticketAssignedIds = ticket.ticketAssignments.map(
+            (ta) => ta.userId
+          );
+          return ticketAssignedIds.includes(agent.id);
+        });
+        agentQueue.push({
+          agent,
+          tickets,
+        });
+      });
+      await this.redisCacheService.setFor10Sec(`agentQueue`, agentQueue);
+    }
+    return agentQueue;
   }
 }
