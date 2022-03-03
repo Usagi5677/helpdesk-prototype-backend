@@ -21,6 +21,7 @@ import { UserService } from 'src/services/user.service';
 import { TicketStatusHistoryConnectionArgs } from 'src/models/args/ticket-status-history-connection.args';
 import * as moment from 'moment';
 import { TicketStatusCountHistory } from 'src/models/ticket-status-count-history';
+import { RedisCacheService } from 'src/redisCache.service';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -28,7 +29,8 @@ export class TicketResolver {
   constructor(
     private ticketService: TicketService,
     private prisma: PrismaService,
-    private userService: UserService
+    private userService: UserService,
+    private readonly redisCacheService: RedisCacheService
   ) {}
 
   @Mutation(() => Int)
@@ -320,18 +322,27 @@ export class TicketResolver {
     @UserEntity() user: User
   ): Promise<TicketStatusCount[]> {
     const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
-    const statusCounts: TicketStatusCount[] = [];
-    for (const status of Object.keys(Status) as Array<keyof typeof Status>) {
-      const count = await this.prisma.ticket.count({
-        where: {
-          status: status,
-          createdById: isAdminOrAgent ? undefined : user.id,
-        },
-      });
-      statusCounts.push({
-        status: Status[status],
-        count,
-      });
+    let statusCounts = await this.redisCacheService.get(
+      `statusCount${isAdminOrAgent ? '' : `Self-${user.id}`}`
+    );
+    if (!statusCounts) {
+      statusCounts = [];
+      for (const status of Object.keys(Status) as Array<keyof typeof Status>) {
+        const count = await this.prisma.ticket.count({
+          where: {
+            status: status,
+            createdById: isAdminOrAgent ? undefined : user.id,
+          },
+        });
+        statusCounts.push({
+          status: Status[status],
+          count,
+        });
+      }
+      await this.redisCacheService.setFor10Sec(
+        `statusCount${isAdminOrAgent ? '' : `Self-${user.id}`}`,
+        statusCounts
+      );
     }
     return statusCounts;
   }
@@ -353,28 +364,41 @@ export class TicketResolver {
         (s) => Status[s]
       );
     }
-    const statusHistory = await this.prisma.ticketStatusHistory.findMany({
-      where: {
-        status: { in: statuses },
-        createdAt: { gte: from, lte: toDate.toDate() },
-      },
-    });
-    const days = toDate.diff(fromDate, 'days') + 1;
-    const statusHistoryByDate: TicketStatusCountHistory[] = [];
-    for (let i = 0; i < days; i++) {
-      const day = fromDate.clone().add(i, 'day');
-      const statusCounts = statuses.map((status) => ({
-        status: status,
-        count:
-          statusHistory.find(
-            (sh) =>
-              moment(sh.createdAt).isSame(day, 'day') && sh.status === status
-          )?.count ?? 0,
-      }));
-      statusHistoryByDate.push({
-        date: day.toDate(),
-        statusCounts,
+    let statusHistoryByDate = await this.redisCacheService.get(
+      `statusCountHistory-${statuses.join(',')}-${fromDate.format(
+        'DD-MMMM-YYYY'
+      )}-${toDate.format('DD-MMMM-YYYY')}`
+    );
+    if (!statusHistoryByDate) {
+      statusHistoryByDate = [];
+      const statusHistory = await this.prisma.ticketStatusHistory.findMany({
+        where: {
+          status: { in: statuses },
+          createdAt: { gte: from, lte: toDate.toDate() },
+        },
       });
+      const days = toDate.diff(fromDate, 'days') + 1;
+      for (let i = 0; i < days; i++) {
+        const day = fromDate.clone().add(i, 'day');
+        const statusCounts = statuses.map((status) => ({
+          status: status,
+          count:
+            statusHistory.find(
+              (sh) =>
+                moment(sh.createdAt).isSame(day, 'day') && sh.status === status
+            )?.count ?? 0,
+        }));
+        statusHistoryByDate.push({
+          date: day.toDate(),
+          statusCounts,
+        });
+      }
+      await this.redisCacheService.setForDay(
+        `statusCountHistory-${statuses.join(',')}-${fromDate.format(
+          'DD-MMMM-YYYY'
+        )}-${toDate.format('DD-MMMM-YYYY')}`,
+        statusHistoryByDate
+      );
     }
     return statusHistoryByDate;
   }
