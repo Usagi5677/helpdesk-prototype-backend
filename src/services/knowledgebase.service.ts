@@ -49,6 +49,7 @@ export class KnowledgebaseService {
           mode,
         },
       });
+      /*
       await this.notificationService.create({
         userId: user.id,
         body: body,
@@ -65,6 +66,7 @@ export class KnowledgebaseService {
           },
         }),
       });
+      */
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');

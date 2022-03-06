@@ -60,8 +60,6 @@ export class NotificationResolver {
 
   @Subscription(() => Notification, {
     filter: (payload, variables) => {
-      console.log('payload');
-      console.log(payload);
       return true;
     },
     async resolve(this: any, payload: { notificationCreated: Notification }) {
