@@ -353,7 +353,7 @@ export class TicketService {
     const isAdmin = await this.userService.isAdmin(user.id);
     // Agents can only assign themselves to ticket.
     if (!isAdmin) {
-      if (agentIds.includes(user.id)) {
+      if (agentIds.length > 1 && agentIds[0] !== user.id) {
         throw new UnauthorizedException(
           'Agents cannot assign other agents to ticket.'
         );
@@ -410,6 +410,8 @@ export class TicketService {
           link: `/ticket/${ticketId}`,
         });
       }
+      const commentBody = `Assigned ${getUser.fullName} (${getUser.rcno}) to ticket.`;
+      await this.createComment(user, ticketId, commentBody, 'Action');
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&

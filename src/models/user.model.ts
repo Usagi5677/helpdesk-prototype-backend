@@ -1,4 +1,4 @@
-import { Field, ObjectType } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
 import { RoleEnum } from 'src/common/enums/roles';
 import { BaseModel } from './base.model';
 
