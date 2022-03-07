@@ -428,7 +428,7 @@ export class TicketService {
   }
 
   //** Set ticket owner agent. */
-  async setOwner(ticketId: number, agentId: number) {
+  async setOwner(user: User, ticketId: number, agentId: number) {
     const ticketAssignments = await this.prisma.ticketAssignment.findMany({
       where: { ticketId },
     });
@@ -445,6 +445,14 @@ export class TicketService {
     ];
     // Check for current owner of ticket.
     const currentOwner = ticketAssignments.find((ta) => ta.isOwner);
+    // Check if requesting user is an admin
+    const isAdmin = await this.userService.isAdmin(user.id);
+    // Prevent if requesting user is not an admin or the current owner
+    if (!isAdmin && currentOwner.userId !== user.id) {
+      throw new UnauthorizedException(
+        `Owner can only be changed by admins or the current owner of ticket.`
+      );
+    }
     if (currentOwner.userId === agentId) {
       throw new BadRequestException(
         `Agent is already the owner of this ticket.`

@@ -114,13 +114,14 @@ export class TicketResolver {
     } to ticket.`;
   }
 
-  @Roles('Admin')
+  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setOwner(
+    @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('agentId') agentId: number
   ): Promise<String> {
-    await this.ticketService.setOwner(ticketId, agentId);
+    await this.ticketService.setOwner(user, ticketId, agentId);
     return `Successfully set new owner of ticket.`;
   }
 
