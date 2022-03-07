@@ -10,6 +10,7 @@ import { User } from './user.model';
 export class Ticket extends BaseModel {
   createdBy: User;
   status: Status;
+  statusChangedAt?: Date;
   title: string;
   body?: string;
   rating?: number;
@@ -21,5 +22,4 @@ export class Ticket extends BaseModel {
   ownerId?: number;
   checklistItems: ChecklistItem[];
   followers: User[];
-  // attachments:
 }

@@ -370,6 +370,7 @@ type Ticket {
   rating: Int
   started: Boolean!
   status: Status!
+  statusChangedAt: Date
   title: String!
 
   """Identifies the date and time when the object was last updated."""

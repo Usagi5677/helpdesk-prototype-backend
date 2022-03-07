@@ -98,6 +98,7 @@ model Ticket {
   createdById       Int
   createdBy         User               @relation(fields: [createdById], references: [id])
   status            TicketStatus       @default(Pending)
+  statusChangedAt   DateTime?
   title             String
   body              String?
   rating            Int?

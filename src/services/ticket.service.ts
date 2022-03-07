@@ -178,7 +178,7 @@ export class TicketService {
     try {
       const ticket = await this.prisma.ticket.update({
         where: { id },
-        data: { status },
+        data: { status, statusChangedAt: new Date() },
       });
       const commentBody = `Ticket status set to ${status}.`;
       await this.createComment(user, ticket.id, commentBody, 'Action');

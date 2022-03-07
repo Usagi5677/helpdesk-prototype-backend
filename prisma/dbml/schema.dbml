@@ -87,6 +87,7 @@ Table Ticket {
   createdById Int [not null]
   createdBy User [not null]
   status TicketStatus [not null, default: 'Pending']
+  statusChangedAt DateTime
   title String [not null]
   body String
   rating Int
