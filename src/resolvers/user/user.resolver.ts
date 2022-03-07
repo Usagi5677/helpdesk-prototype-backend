@@ -1,28 +1,15 @@
-import { ExecutionContext, UseGuards } from '@nestjs/common';
-import {
-  Args,
-  GqlExecutionContext,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { InternalServerErrorException, UseGuards } from '@nestjs/common';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UserEntity } from '../../decorators/user.decorator';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { User } from '../../models/user.model';
 import { PrismaService } from 'nestjs-prisma';
-import { UsersConnectionArgs } from '../../models/args/user-connection.args';
-import { PaginatedUsers } from '../../models/pagination/user-connection.model';
-import {
-  connectionFromArraySlice,
-  getPagingParameters,
-} from '../../common/pagination/connection-args';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { UserService } from 'src/services/user.service';
 import { Profile } from 'src/models/profile.model';
 import { APSService } from 'src/services/aps.service';
 import { UserWithRoles } from 'src/models/user-with-roles.model';
-import { Role } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
 import { RoleEnum } from 'src/common/enums/roles';
 
@@ -78,56 +65,24 @@ export class UserResolver {
     return 'User role removed.';
   }
 
-  // @Query(() => PaginatedUsers)
-  // async users(@Args() args: UsersConnectionArgs): Promise<PaginatedUsers> {
-  //   const { limit, offset } = getPagingParameters(args);
-
-  //   const realOffset = offset || 0;
-  //   const realLimit = Math.min(50, limit || 50);
-  //   const realLimitPlusOne = realLimit + 1;
-
-  //   const where: any = { isDeleted: false, rcno: { gt: 0 } };
-
-  //   if (args.searchTerm) {
-  //     let rcno: number | null = null;
-  //     try {
-  //       rcno = parseInt(args.searchTerm);
-  //     } catch (error) {}
-
-  //     if (rcno) {
-  //       where['rcno'] = rcno;
-  //     } else {
-  //       where['fullName'] = { search: args.searchTerm };
-  //     }
-  //   }
-
-  //   const users = await this.prisma.user.findMany({
-  //     skip: offset,
-  //     take: realLimitPlusOne,
-  //     where,
-  //     orderBy: { createdAt: 'desc' },
-  //   });
-
-  //   const count = await this.prisma.user.count();
-
-  //   const { edges, pageInfo } = connectionFromArraySlice(
-  //     users.slice(0, realLimit),
-  //     args,
-  //     {
-  //       arrayLength: count,
-  //       sliceStart: realOffset,
-  //     }
-  //   );
-
-  //   return {
-  //     edges,
-  //     pageInfo: {
-  //       ...pageInfo,
-  //       hasNextPage: realOffset + realLimit < count,
-  //       hasPreviousPage: realOffset >= realLimit,
-  //     },
-  //   };
-  // }
+  /** Add user role. */
+  @Roles('Admin')
+  @Mutation(() => String)
+  async addUserRole(
+    @Args('userId') userId: number,
+    @Args('role', { type: () => RoleEnum }) role: RoleEnum
+  ): Promise<string> {
+    try {
+      await this.prisma.userRole.create({
+        data: { userId, role },
+      });
+      await this.redisCacheService.del(`roles-${userId}`);
+      return 'User role removed.';
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
 
   @Query(() => [User])
   async searchUser(@Args('query') query: string) {
