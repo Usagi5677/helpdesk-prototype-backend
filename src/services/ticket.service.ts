@@ -510,6 +510,8 @@ export class TicketService {
       await this.prisma.checklistItem.create({
         data: { ticketId, description },
       });
+      const commentBody = `Created new checklist item: "${description}"`;
+      await this.createComment(user, ticketId, commentBody, 'Action');
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -556,6 +558,13 @@ export class TicketService {
           : { completedById: null, completedAt: null },
       });
       if (complete) {
+        const commentBody = `Completed checklist item: "${checkListItem.description}"`;
+        await this.createComment(
+          user,
+          checkListItem.ticketId,
+          commentBody,
+          'Action'
+        );
         const ticketUsers = await this.getTicketUserIds(
           checkListItem.ticketId,
           user.id
@@ -588,6 +597,13 @@ export class TicketService {
       await this.prisma.checklistItem.delete({
         where: { id },
       });
+      const commentBody = `Deleted checklist item: "${checkListItem.description}"`;
+      await this.createComment(
+        user,
+        checkListItem.ticketId,
+        commentBody,
+        'Action'
+      );
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
