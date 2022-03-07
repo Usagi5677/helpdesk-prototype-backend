@@ -284,25 +284,27 @@ export class TicketService {
       });
       const commentBody = `Added ${newFollower.fullName} (${newFollower.rcno}) as a ticket follower.`;
       await this.createComment(user, ticketId, commentBody, 'Action');
-      const body = `${user.fullName} has added you as a follower to ticket ${ticketId}: ${ticket.title}.`;
-      await this.notificationService.createInBackground(
-        {
-          userId: newFollower.id,
-          body,
-        },
-        {
-          to: [newFollower.email],
-          subject: `Added as ticket follower`,
-          html: emailTemplate({
-            text: body,
-            extraInfo: `By: <strong>${user.fullName} (${user.rcno})</strong>`,
-            callToAction: {
-              link: `${this.configService.get('APP_URL')}/ticket/${ticketId}`,
-              title: 'View Ticket',
-            },
-          }),
-        }
-      );
+      if (user.id !== newFollower.id) {
+        const body = `${user.fullName} has added you as a follower to ticket ${ticketId}: ${ticket.title}.`;
+        await this.notificationService.createInBackground(
+          {
+            userId: newFollower.id,
+            body,
+          },
+          {
+            to: [newFollower.email],
+            subject: `Added as ticket follower`,
+            html: emailTemplate({
+              text: body,
+              extraInfo: `By: <strong>${user.fullName} (${user.rcno})</strong>`,
+              callToAction: {
+                link: `${this.configService.get('APP_URL')}/ticket/${ticketId}`,
+                title: 'View Ticket',
+              },
+            }),
+          }
+        );
+      }
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
