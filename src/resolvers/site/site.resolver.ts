@@ -82,6 +82,8 @@ export class SiteResolver {
   @Roles('SuperAdmin')
   @Query(() => [Site])
   async sites(): Promise<Site[]> {
-    return await this.prisma.site.findMany();
+    return await this.prisma.site.findMany({
+      orderBy: [{ isEnabled: 'desc' }, { id: 'asc' }],
+    });
   }
 }
