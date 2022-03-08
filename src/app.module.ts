@@ -17,6 +17,7 @@ import { KnowledgebaseModule } from './resolvers/knowledgebase/knowledgebase.mod
 import jwtDecode from 'jwt-decode';
 import { PubsubModule } from './resolvers/pubsub/pubsub.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SiteModule } from './resolvers/site/site.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AttachmentModule,
     KnowledgebaseModule,
     ScheduleModule.forRoot(),
+    SiteModule,
   ],
   controllers: [AppController],
   providers: [AppService, AppResolver, DateScalar],

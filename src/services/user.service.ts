@@ -46,7 +46,7 @@ export class UserService {
   }
 
   //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */
-  async getUserRolesList(id: number): Promise<Role[]> {
+  async getUserRolesList(id: number): Promise<string[]> {
     let roles = await this.redisCacheService.get(`roles-${id}`);
     if (!roles) {
       const userRoles = await this.prisma.userRole.findMany({

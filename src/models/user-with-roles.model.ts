@@ -8,4 +8,5 @@ export class UserWithRoles {
   userId: string;
   email: string;
   roles: string[];
+  isSuperAdmin: boolean;
 }

@@ -12,6 +12,20 @@ generator dbml {
   provider = "prisma-dbml-generator"
 }
 
+model Site {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  mode      String   @default("Public")
+  isEnabled Boolean  @default(true)
+  // userRoles       UserRole[]
+  // userGroups      UserGroup[]
+  // tickets         Ticket[]
+  // categories      Category[]
+  // statusHistories TicketStatusHistory[]
+}
+
 model User {
   id                   Int                @id @default(autoincrement())
   createdAt            DateTime           @default(now())
@@ -30,6 +44,7 @@ model User {
   checklistCompletions ChecklistItem[]
   ticketComments       TicketComment[]
   ticketAttachments    TicketAttachment[]
+  isSuperAdmin         Boolean            @default(false)
 }
 
 model Notification {
@@ -65,6 +80,8 @@ model UserRole {
   userId    Int
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role
+  // siteId    Int
+  // site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@unique([userId, role])
 }
@@ -77,6 +94,8 @@ model UserGroup {
   mode           String          @default("Private")
   createdById    Int
   userGroupUsers UserGroupUser[]
+  // siteId         Int
+  // site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
 }
 
 model UserGroupUser {
@@ -97,6 +116,8 @@ model Ticket {
   updatedAt         DateTime           @updatedAt
   createdById       Int
   createdBy         User               @relation(fields: [createdById], references: [id])
+  // siteId            Int
+  // site              Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
   status            TicketStatus       @default(Pending)
   statusChangedAt   DateTime?
   title             String
@@ -133,6 +154,8 @@ model Category {
   name      String
   active    Boolean          @default(true)
   tickets   TicketCategory[]
+  // siteId    Int
+  // site      Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
 }
 
 model TicketCategory {
@@ -214,6 +237,8 @@ model TicketStatusHistory {
   createdAt DateTime     @default(now())
   status    TicketStatus
   count     Int
+  // siteId    Int
+  // site      Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@unique([createdAt, status])
 }

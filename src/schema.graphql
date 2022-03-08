@@ -85,13 +85,16 @@ type Mutation {
   changeCategoryName(id: Int!, name: String!): String!
   createCategory(name: String!): String!
   createKnowledgebase(body: String!, mode: String!, title: String!): String!
+  createSite(mode: String!, name: String!): String!
   createTicket(body: String!, title: String!): Int!
   createUserGroup(mode: String!, name: String!): String!
   deleteCategory(id: Int!): String!
   deleteChecklistItem(id: Int!): String!
+  deleteSite(id: Int!): String!
   deleteUserGroup(id: Int!): String!
   editChecklistItem(description: String!, id: Int!): String!
   editKnowledgebase(body: String!, id: Int!, mode: String!, title: String!): String!
+  editSite(id: Int!, mode: String!, name: String!): String!
   editUserGroup(id: Int!, mode: String!, name: String!): String!
   flushRedis: String!
   giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!
@@ -281,6 +284,7 @@ type Query {
   searchUser(query: String!): [User!]!
   searchUsersAndGroups(onlyAgents: Boolean!, query: String!): [SearchResult!]!
   singleKnowledgebase(knowledgebaseId: Int!): Knowledgebase!
+  sites: [Site!]!
   ticket(ticketId: Int!): Ticket!
   ticketAttachment(id: Int!): TicketAttachment!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
@@ -338,6 +342,18 @@ type SearchResult {
   type: String!
   user: User
   userGroup: UserGroup
+}
+
+type Site {
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  id: Int!
+  isEnabled: Boolean!
+  mode: String!
+  name: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
 }
 
 """Ticket statuses."""
@@ -436,6 +452,7 @@ type User {
   email: String!
   fullName: String!
   id: Int!
+  isSuperAdmin: Boolean!
   rcno: Int!
   roles: [Role!]
 
@@ -474,6 +491,7 @@ type UserWithRoles {
   email: String!
   fullName: String!
   id: Int!
+  isSuperAdmin: Boolean!
   rcno: Int!
   roles: [String!]!
   userId: String!

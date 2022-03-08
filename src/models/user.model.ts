@@ -9,4 +9,5 @@ export class User extends BaseModel {
   userId: string;
   email: string;
   roles?: RoleEnum[];
+  isSuperAdmin: boolean;
 }
