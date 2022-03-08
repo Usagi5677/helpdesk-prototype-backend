@@ -3,14 +3,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import {
-  Args,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-  Subscription,
-} from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
@@ -38,7 +31,7 @@ export class KnowledgebaseResolver {
     @Args('title') title: string,
     @Args('body') body: string,
     @Args('mode') mode: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.knowledgebaseService.createKnowledgebase(
       user,
       title,
@@ -75,7 +68,7 @@ export class KnowledgebaseResolver {
   async removeKnowledgebase(
     @UserEntity() user: User,
     @Args('knowledgebaseId') knowledgebaseId: number
-  ): Promise<String> {
+  ): Promise<string> {
     const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
     if (!isAdminOrAgent) throw new UnauthorizedException('Unauthorized.');
     try {
@@ -94,7 +87,7 @@ export class KnowledgebaseResolver {
     @Args('title') title: string,
     @Args('body') body: string,
     @Args('mode') mode: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.knowledgebaseService.changeKnowledgebase(id, title, body, mode);
     return `Knowledge base updated.`;
   }

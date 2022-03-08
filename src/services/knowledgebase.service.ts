@@ -6,9 +6,9 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
-import ConnectionArgs, {
+import {
   connectionFromArraySlice,
   getPagingParameters,
 } from 'src/common/pagination/connection-args';
@@ -19,7 +19,6 @@ import { Knowledgebase } from 'src/models/knowledgebase.model';
 import { NotificationService } from './notification.service';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
-import emailTemplate from 'src/common/helpers/emailTemplate';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -139,7 +138,7 @@ export class KnowledgebaseService {
 
     // Only these roles can see all private results, others can only see only public knowledgebase
     const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
-    let where: any = { AND: [] };
+    const where: any = { AND: [] };
     if (!isAdminOrAgent) {
       where.AND.push({
         mode: 'Public',

@@ -49,7 +49,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('priority', { type: () => Priority }) priority: Priority
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.setTicketPriority(user, ticketId, priority);
     return `Ticket priority set to ${priority}.`;
   }
@@ -60,7 +60,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') id: number,
     @Args('status', { type: () => Status }) status: Status
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.setTicketStatus(user, id, status);
     return `Ticket status set to ${status}.`;
   }
@@ -71,7 +71,7 @@ export class TicketResolver {
     @Args('ticketId') ticketId: number,
     @Args('rating') rating: number,
     @Args('feedback') feedback: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.giveTicketFeedback(
       user,
       ticketId,
@@ -86,7 +86,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('newFollowerUserId') newFollowerUserId: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.addFollower(user, ticketId, newFollowerUserId);
     return `Successfully added follower to ticket.`;
   }
@@ -96,7 +96,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('deletingFollowerId') deletingFollowerId: number
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.removeFollower(user, ticketId, deletingFollowerId);
     return `Successfully removed follower from ticket.`;
   }
@@ -107,7 +107,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('agentIds', { type: () => [Int] }) agentIds: number[]
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.assignAgents(user, ticketId, agentIds);
     return `Successfully assigned agent${
       agentIds.length > 1 ? 's' : ''
@@ -120,7 +120,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('agentId') agentId: number
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.setOwner(user, ticketId, agentId);
     return `Successfully set new owner of ticket.`;
   }
@@ -131,7 +131,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('agentId') agentId: number
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.unassignAgent(user, ticketId, agentId);
     return `Successfully unassigned agent to ticket.`;
   }
@@ -142,7 +142,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('description') description: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.createChecklistItem(user, ticketId, description);
     return `Added checklist item to ticket.`;
   }
@@ -153,7 +153,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('id') id: number,
     @Args('description') description: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.editChecklistItem(user, id, description);
     return `Checklist item updated.`;
   }
@@ -164,7 +164,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('id') id: number,
     @Args('complete') complete: boolean
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.toggleChecklistItem(user, id, complete);
     return `Checklist item updated.`;
   }
@@ -174,7 +174,7 @@ export class TicketResolver {
   async deleteChecklistItem(
     @UserEntity() user: User,
     @Args('id') id: number
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.deleteChecklistItem(user, id);
     return `Checklist item deleted.`;
   }
@@ -185,7 +185,7 @@ export class TicketResolver {
     @Args('ticketId') ticketId: number,
     @Args('body') body: string,
     @Args('isPublic', { nullable: true }) mode: boolean
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.addComment(user, ticketId, body, mode);
     return `Comment added to ticket.`;
   }
@@ -283,7 +283,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('categoryId') categoryId: number
-  ): Promise<String> {
+  ): Promise<string> {
     const isAdminOrAssigned =
       await this.ticketService.isAdminOrAssignedToTicket(user.id, ticketId);
     if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
@@ -304,7 +304,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('categoryId') categoryId: number
-  ): Promise<String> {
+  ): Promise<string> {
     const isAdminOrAssigned =
       await this.ticketService.isAdminOrAssignedToTicket(user.id, ticketId);
     if (!isAdminOrAssigned) throw new UnauthorizedException('Unauthorized.');
@@ -354,10 +354,11 @@ export class TicketResolver {
   async ticketStatusCountHistory(
     @Args() args: TicketStatusHistoryConnectionArgs
   ): Promise<TicketStatusCountHistory[]> {
-    let { statuses, from, to } = args;
+    let { statuses } = args;
+    const { from, to } = args;
     const today = moment();
     const fromDate = moment(from).startOf('day');
-    let toDate = moment(to).endOf('day');
+    const toDate = moment(to).endOf('day');
     if (today.isSame(toDate, 'day')) {
       toDate.subtract(1, 'day');
     }

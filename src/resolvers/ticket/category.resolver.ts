@@ -15,7 +15,7 @@ export class CategoryResolver {
 
   @Roles('Admin')
   @Mutation(() => String)
-  async createCategory(@Args('name') name: string): Promise<String> {
+  async createCategory(@Args('name') name: string): Promise<string> {
     await this.ticketService.createCategory(name);
     return `Successfully created category ${name}.`;
   }
@@ -25,14 +25,14 @@ export class CategoryResolver {
   async changeCategoryName(
     @Args('id') id: number,
     @Args('name') name: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.ticketService.changeCategoryName(id, name);
     return `Changed category name to ${name}.`;
   }
 
   @Roles('Admin')
   @Mutation(() => String)
-  async deleteCategory(@Args('id') id: number): Promise<String> {
+  async deleteCategory(@Args('id') id: number): Promise<string> {
     await this.ticketService.deleteCategory(id);
     return `Category deleted.`;
   }

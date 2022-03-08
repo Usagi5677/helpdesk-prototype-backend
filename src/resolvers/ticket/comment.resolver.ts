@@ -31,6 +31,7 @@ export class CommentResolver {
       return payload.commentCreated;
     },
   })
+  // eslint-disable-next-line
   async commentCreated(@Args('ticketId') ticketId: number) {
     return this.pubSub.asyncIterator('commentCreated');
   }
@@ -38,7 +39,7 @@ export class CommentResolver {
   async hasAccess(uuid: string, ticketId: number): Promise<boolean> {
     const user = await this.authService.validateUser(uuid);
     if (!user) throw new UnauthorizedException();
-    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+    const [isAdminOrAgent] = await this.ticketService.checkTicketAccess(
       user.id,
       ticketId
     );
@@ -57,7 +58,7 @@ export class CommentResolver {
     );
     if (!hasTicketAccess) throw new UnauthorizedException('Unauthorized');
 
-    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+    const [isAdminOrAgent] = await this.ticketService.checkTicketAccess(
       user.id,
       ticketId
     );

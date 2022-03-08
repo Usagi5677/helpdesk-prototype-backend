@@ -1,11 +1,4 @@
-import {
-  Args,
-  Int,
-  Mutation,
-  Query,
-  Resolver,
-  Subscription,
-} from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { Notification } from '../../models/notification.model';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserEntity } from '../../decorators/user.decorator';
@@ -59,7 +52,7 @@ export class NotificationResolver {
   }
 
   @Subscription(() => Notification, {
-    filter: (payload, variables) => {
+    filter: () => {
       return true;
     },
     async resolve(this: any, payload: { notificationCreated: Notification }) {

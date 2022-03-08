@@ -7,7 +7,6 @@ import {
   Post,
   Req,
   Res,
-  UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -40,7 +39,7 @@ export class AttachmentController {
     @Body() { ticketId, description, isPublic }: CreateAttachmentInput
   ) {
     const user = req.user;
-    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+    const [isAdminOrAgent] = await this.ticketService.checkTicketAccess(
       user.id,
       parseInt(ticketId)
     );

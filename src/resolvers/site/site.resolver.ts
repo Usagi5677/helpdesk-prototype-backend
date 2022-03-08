@@ -20,7 +20,7 @@ export class SiteResolver {
   async createSite(
     @Args('name') name: string,
     @Args('mode') mode: string
-  ): Promise<String> {
+  ): Promise<string> {
     if (!['Public', 'Private'].includes(mode)) {
       throw new BadRequestException('Invalid mode.');
     }
@@ -45,7 +45,7 @@ export class SiteResolver {
     @Args('name') name: string,
     @Args('mode') mode: string
     // @Args('isEnabled') isEnabled: boolean
-  ): Promise<String> {
+  ): Promise<string> {
     if (!['Public', 'Private'].includes(mode)) {
       throw new BadRequestException('Invalid mode.');
     }
@@ -67,7 +67,7 @@ export class SiteResolver {
 
   @Roles('SuperAdmin')
   @Mutation(() => String)
-  async deleteSite(@Args('id') id: number): Promise<String> {
+  async deleteSite(@Args('id') id: number): Promise<string> {
     try {
       await this.prisma.site.delete({
         where: { id },

@@ -191,7 +191,7 @@ export class AttachmentService {
     user: User,
     ticketId: number
   ): Promise<TicketAttachment[]> {
-    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+    const [isAdminOrAgent] = await this.ticketService.checkTicketAccess(
       user.id,
       ticketId
     );

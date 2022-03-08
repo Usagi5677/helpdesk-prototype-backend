@@ -7,9 +7,9 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
-import { Prisma, TicketComment, TicketFollowing, User } from '@prisma/client';
+import { Prisma, TicketFollowing, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
-import ConnectionArgs, {
+import {
   connectionFromArraySlice,
   getPagingParameters,
 } from 'src/common/pagination/connection-args';
@@ -272,7 +272,7 @@ export class TicketService {
         throw new UnauthorizedException('Not authorized to add followers.');
       }
     }
-    const [newFollower, _] = await this.userService.createIfNotExists(
+    const [newFollower] = await this.userService.createIfNotExists(
       newFollowerUserId
     );
     if (!newFollower) {
@@ -439,7 +439,7 @@ export class TicketService {
     if (!agent) {
       throw new BadRequestException(`Agent is not assigned to this ticket.`);
     }
-    let transactions = [
+    const transactions = [
       this.prisma.ticketAssignment.update({
         where: { id: agent.id },
         data: { isOwner: true },
@@ -629,7 +629,7 @@ export class TicketService {
     body: string,
     isPublic: boolean
   ) {
-    const [isAdminOrAgent, _] = await this.checkTicketAccess(user.id, ticketId);
+    const [isAdminOrAgent] = await this.checkTicketAccess(user.id, ticketId);
     let mode = 'Public';
     if (isAdminOrAgent && isPublic === false) mode = 'Private';
     await this.createComment(user, ticketId, body, mode);
@@ -715,7 +715,7 @@ export class TicketService {
     if (!self && !isAdminOrAgent) {
       throw new UnauthorizedException('Unauthorized.');
     }
-    let where: any = { AND: [] };
+    const where: any = { AND: [] };
     if (createdById) {
       where.AND.push({ createdById });
     }

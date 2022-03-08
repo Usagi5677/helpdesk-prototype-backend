@@ -3,7 +3,7 @@ import { createClient, RedisClientType } from 'redis';
 
 @Injectable()
 export class RedisCacheService {
-  constructor() {}
+  // constructor() {}
   async connect(): Promise<RedisClientType<any>> {
     const client = createClient();
     client.on('error', (err) => console.log('Redis Client Error', err));
@@ -12,8 +12,8 @@ export class RedisCacheService {
   }
 
   parseWithDate(jsonString: string): any {
-    var reDateDetect = /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/; // startswith: 2015-04-29T22:06:55
-    var resultObject = JSON.parse(jsonString, (key: any, value: any) => {
+    const reDateDetect = /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/; // startswith: 2015-04-29T22:06:55
+    const resultObject = JSON.parse(jsonString, (key: any, value: any) => {
       if (typeof value == 'string' && reDateDetect.exec(value)) {
         return new Date(value);
       }

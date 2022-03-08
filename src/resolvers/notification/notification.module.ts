@@ -6,8 +6,6 @@ import { NotificationProvider } from './notification.provider';
 import { BullModule } from '@nestjs/bull';
 import { NotificationConsumer } from './notification.consumer';
 import { UserModule } from '../user/user.module';
-import { KnowledgebaseResolver } from '../knowledgebase/knowledgebase.resolver';
-import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [

@@ -37,7 +37,7 @@ export class UserGroupResolver {
     @UserEntity() user: User,
     @Args('name') name: string,
     @Args('mode') mode: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.userService.createUserGroup(user, name, mode);
     return `Successfully created user group ${name}.`;
   }
@@ -48,14 +48,14 @@ export class UserGroupResolver {
     @Args('id') id: number,
     @Args('name') name: string,
     @Args('mode') mode: string
-  ): Promise<String> {
+  ): Promise<string> {
     await this.userService.editUserGroup(id, name, mode);
     return `User group updated.`;
   }
 
   @Roles('Admin')
   @Mutation(() => String)
-  async deleteUserGroup(@Args('id') id: number): Promise<String> {
+  async deleteUserGroup(@Args('id') id: number): Promise<string> {
     await this.userService.deleteUserGroup(id);
     return `User group deleted.`;
   }
@@ -65,7 +65,7 @@ export class UserGroupResolver {
   async addToUserGroup(
     @Args('userId') userId: string,
     @Args('userGroupId') userGroupId: number
-  ): Promise<String> {
+  ): Promise<string> {
     await this.userService.addToUserGroup(userId, userGroupId);
     return `Successfully added user to user group.`;
   }
@@ -75,7 +75,7 @@ export class UserGroupResolver {
   async removeFromUserGroup(
     @Args('userId') userId: number,
     @Args('userGroupId') userGroupId: number
-  ): Promise<String> {
+  ): Promise<string> {
     await this.userService.removeFromUserGroup(userId, userGroupId);
     return `Removed user from user group.`;
   }

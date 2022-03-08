@@ -132,7 +132,7 @@ export class UserService {
 
   //** Add user to user group. */
   async addToUserGroup(userId: string, userGroupId: number) {
-    const [user, _] = await this.createIfNotExists(userId);
+    const [user] = await this.createIfNotExists(userId);
     try {
       await this.prisma.userGroupUser.create({
         data: { userId: user.id, userGroupId },
@@ -222,7 +222,7 @@ export class UserService {
     onlyAgents?: boolean
   ): Promise<SearchResult[]> {
     const contains = query.trim();
-    let searchResults: SearchResult[] = [];
+    const searchResults: SearchResult[] = [];
     let users: User[] = [];
     if (onlyAgents) {
       users = await this.prisma.user.findMany({
@@ -284,7 +284,7 @@ export class UserService {
   }
 
   async addAppUser(userId: string, roles: RoleEnum[]) {
-    let user = await this.prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: { userId },
       include: { roles: true },
     });
