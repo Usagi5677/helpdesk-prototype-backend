@@ -1,19 +1,19 @@
-import {
-  BadRequestException,
-  InternalServerErrorException,
-  UseGuards,
-} from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { Site } from 'src/models/site.model';
 import { PrismaService } from 'nestjs-prisma';
+import { SiteService } from 'src/services/site.service';
 
 @Resolver(() => Site)
 @UseGuards(GqlAuthGuard, RolesGuard)
 export class SiteResolver {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly siteService: SiteService
+  ) {}
 
   @Roles('SuperAdmin')
   @Mutation(() => String)
@@ -21,21 +21,8 @@ export class SiteResolver {
     @Args('name') name: string,
     @Args('mode') mode: string
   ): Promise<string> {
-    if (!['Public', 'Private'].includes(mode)) {
-      throw new BadRequestException('Invalid mode.');
-    }
-    try {
-      await this.prisma.site.create({
-        data: {
-          name,
-          mode,
-        },
-      });
-      return `Successfully created site ${name}.`;
-    } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
-    }
+    await this.siteService.createSite(name, mode);
+    return `Successfully created site ${name}.`;
   }
 
   @Roles('SuperAdmin')
@@ -46,37 +33,15 @@ export class SiteResolver {
     @Args('mode') mode: string
     // @Args('isEnabled') isEnabled: boolean
   ): Promise<string> {
-    if (!['Public', 'Private'].includes(mode)) {
-      throw new BadRequestException('Invalid mode.');
-    }
-    try {
-      await this.prisma.site.update({
-        where: { id },
-        data: {
-          name,
-          mode,
-          // isEnabled,
-        },
-      });
-      return `Successfully updated site ${name}.`;
-    } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
-    }
+    await this.siteService.editSite(id, name, mode);
+    return `Successfully updated site ${name}.`;
   }
 
   @Roles('SuperAdmin')
   @Mutation(() => String)
   async deleteSite(@Args('id') id: number): Promise<string> {
-    try {
-      await this.prisma.site.delete({
-        where: { id },
-      });
-      return `Successfully deleted site`;
-    } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
-    }
+    await this.siteService.deleteSite(id);
+    return `Successfully deleted site`;
   }
 
   @Roles('SuperAdmin')
