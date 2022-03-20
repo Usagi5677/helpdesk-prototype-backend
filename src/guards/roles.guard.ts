@@ -22,7 +22,5 @@ export class RolesGuard implements CanActivate {
     if (roles.includes('SuperAdmin') && user.isSuperAdmin) {
       return true;
     }
-    const userRoles = await this.userService.getUserRolesList(user.id);
-    return roles.some((r) => userRoles.includes(r));
   }
 }

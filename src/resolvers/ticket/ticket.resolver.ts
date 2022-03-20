@@ -23,6 +23,8 @@ import * as moment from 'moment';
 import { TicketStatusCountHistory } from 'src/models/ticket-status-count-history';
 import { RedisCacheService } from 'src/redisCache.service';
 import { AgentQueue } from 'src/models/agent-queue.model';
+import { SiteService } from 'src/services/site.service';
+import { RoleEnum } from 'src/common/enums/roles';
 
 @Resolver(() => Ticket)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -31,36 +33,43 @@ export class TicketResolver {
     private ticketService: TicketService,
     private prisma: PrismaService,
     private userService: UserService,
-    private readonly redisCacheService: RedisCacheService
+    private readonly redisCacheService: RedisCacheService,
+    private siteService: SiteService
   ) {}
 
   @Mutation(() => Int)
   async createTicket(
     @UserEntity() user: User,
     @Args('title') title: string,
-    @Args('body') body: string
+    @Args('body') body: string,
+    @Args('siteId') siteId: number
   ): Promise<number> {
+    await this.siteService.checkSiteAccess(user.id, siteId);
     return await this.ticketService.createTicket(user, title, body);
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setTicketPriority(
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('priority', { type: () => Priority }) priority: Priority
   ): Promise<string> {
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    await this.userService.checkAdminOrAgent(user.id, ticket.id);
     await this.ticketService.setTicketPriority(user, ticketId, priority);
     return `Ticket priority set to ${priority}.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setTicketStatus(
     @UserEntity() user: User,
     @Args('ticketId') id: number,
     @Args('status', { type: () => Status }) status: Status
   ): Promise<string> {
+    const ticket = await this.prisma.ticket.findFirst({ where: { id: id } });
+    await this.userService.checkAdminOrAgent(user.id, ticket.id);
     await this.ticketService.setTicketStatus(user, id, status);
     return `Ticket status set to ${status}.`;
   }
@@ -101,80 +110,119 @@ export class TicketResolver {
     return `Successfully removed follower from ticket.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async assignAgents(
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('agentIds', { type: () => [Int] }) agentIds: number[]
   ): Promise<string> {
-    await this.ticketService.assignAgents(user, ticketId, agentIds);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    const isAdmin = await this.userService.isAdmin(user.id, ticket.siteId);
+    const isAgent = await this.userService.isAgent(user.id, ticket.siteId);
+    if (!isAdmin && !isAgent) {
+      throw new UnauthorizedException('You do not have access to this ticket.');
+    }
+    await this.ticketService.assignAgents(
+      user,
+      ticketId,
+      agentIds,
+      isAdmin,
+      ticket.siteId
+    );
     return `Successfully assigned agent${
       agentIds.length > 1 ? 's' : ''
     } to ticket.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async setOwner(
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('agentId') agentId: number
   ): Promise<string> {
-    await this.ticketService.setOwner(user, ticketId, agentId);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    await this.userService.checkAdminOrAgent(user.id, ticket.id);
+    await this.ticketService.setOwner(user, ticketId, agentId, ticket.siteId);
     return `Successfully set new owner of ticket.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async unassignAgent(
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('agentId') agentId: number
   ): Promise<string> {
-    await this.ticketService.unassignAgent(user, ticketId, agentId);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    await this.userService.checkAdminOrAgent(user.id, ticket.id);
+    await this.ticketService.unassignAgent(
+      user,
+      ticketId,
+      agentId,
+      ticket.siteId
+    );
     return `Successfully unassigned agent to ticket.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async addChecklistItem(
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('description') description: string
   ): Promise<string> {
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    await this.userService.checkAdminOrAgent(user.id, ticket.id);
     await this.ticketService.createChecklistItem(user, ticketId, description);
     return `Added checklist item to ticket.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async editChecklistItem(
     @UserEntity() user: User,
     @Args('id') id: number,
     @Args('description') description: string
   ): Promise<string> {
+    const checklistItem = await this.prisma.checklistItem.findFirst({
+      where: { id },
+      include: { ticket: true },
+    });
+    await this.userService.checkAdminOrAgent(user.id, checklistItem.ticket.id);
     await this.ticketService.editChecklistItem(user, id, description);
     return `Checklist item updated.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async toggleChecklistItem(
     @UserEntity() user: User,
     @Args('id') id: number,
     @Args('complete') complete: boolean
   ): Promise<string> {
+    const checklistItem = await this.prisma.checklistItem.findFirst({
+      where: { id },
+      include: { ticket: true },
+    });
+    await this.userService.checkAdminOrAgent(user.id, checklistItem.ticket.id);
     await this.ticketService.toggleChecklistItem(user, id, complete);
     return `Checklist item updated.`;
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async deleteChecklistItem(
     @UserEntity() user: User,
     @Args('id') id: number
   ): Promise<string> {
+    const checklistItem = await this.prisma.checklistItem.findFirst({
+      where: { id },
+      include: { ticket: true },
+    });
+    await this.userService.checkAdminOrAgent(user.id, checklistItem.ticket.id);
     await this.ticketService.deleteChecklistItem(user, id);
     return `Checklist item deleted.`;
   }
@@ -195,18 +243,16 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
-    args.self = true;
     args.createdById = user.id;
     return await this.ticketService.getTicketsWithPagination(user, args);
   }
 
-  @Roles('Admin', 'Agent')
   @Query(() => PaginatedTickets)
   async tickets(
     @UserEntity() user: User,
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
-    args.self = false;
+    args.all = true;
     if (args.createdByUserId) {
       const createdBy = await this.prisma.user.findFirst({
         where: { userId: args.createdByUserId },
@@ -220,13 +266,11 @@ export class TicketResolver {
     return await this.ticketService.getTicketsWithPagination(user, args);
   }
 
-  @Roles('Agent')
   @Query(() => PaginatedTickets)
   async assignedTickets(
     @UserEntity() user: User,
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
-    args.self = false;
     args.assignedToId = user.id;
     if (args.createdByUserId) {
       const createdBy = await this.prisma.user.findFirst({
@@ -246,7 +290,6 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args() args: TicketConnectionArgs
   ): Promise<PaginatedTickets> {
-    args.self = false;
     args.followingId = user.id;
     if (args.createdByUserId) {
       const createdBy = await this.prisma.user.findFirst({
@@ -277,7 +320,6 @@ export class TicketResolver {
     return await this.ticketService.ticket(user, ticketId);
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async addTicketCategory(
     @UserEntity() user: User,
@@ -298,7 +340,6 @@ export class TicketResolver {
     }
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async removeTicketCategory(
     @UserEntity() user: User,
@@ -321,11 +362,32 @@ export class TicketResolver {
 
   @Query(() => [TicketStatusCount])
   async ticketStatusCount(
-    @UserEntity() user: User
+    @UserEntity() user: User,
+    @Args('siteId', { nullable: true }) siteId?: number
   ): Promise<TicketStatusCount[]> {
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
+    let type = 'Self';
+    let siteIds = [];
+    const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
+      RoleEnum.Admin,
+      RoleEnum.Agent,
+    ]);
+    if (sitesWithRoles.length > 0) {
+      if (siteId && sitesWithRoles.includes(siteId)) {
+        type = 'Site';
+        siteIds = [siteId];
+      } else {
+        type = 'OwnSites';
+        siteIds = sitesWithRoles;
+      }
+    }
     let statusCounts = await this.redisCacheService.get(
-      `statusCount${isAdminOrAgent ? '' : `Self-${user.id}`}`
+      `statusCount${
+        type === 'Self'
+          ? `Self-${user.id}`
+          : type === 'Site'
+          ? `Site-${siteId}`
+          : `OwnSites-${user.id}`
+      }`
     );
     if (!statusCounts) {
       statusCounts = [];
@@ -333,7 +395,8 @@ export class TicketResolver {
         const count = await this.prisma.ticket.count({
           where: {
             status: status,
-            createdById: isAdminOrAgent ? undefined : user.id,
+            createdById: type === 'Self' ? user.id : undefined,
+            siteId: type === 'Self' ? undefined : { in: siteIds },
           },
         });
         statusCounts.push({
@@ -342,20 +405,39 @@ export class TicketResolver {
         });
       }
       await this.redisCacheService.setFor10Sec(
-        `statusCount${isAdminOrAgent ? '' : `Self-${user.id}`}`,
+        `statusCount${
+          type === 'Self'
+            ? `Self-${user.id}`
+            : type === 'Site'
+            ? `Site-${siteId}`
+            : `OwnSites-${user.id}`
+        }`,
         statusCounts
       );
     }
     return statusCounts;
   }
 
-  @Roles('Admin', 'Agent')
   @Query(() => [TicketStatusCountHistory])
   async ticketStatusCountHistory(
+    @UserEntity() user: User,
     @Args() args: TicketStatusHistoryConnectionArgs
   ): Promise<TicketStatusCountHistory[]> {
     let { statuses } = args;
-    const { from, to } = args;
+    const { from, to, siteId } = args;
+    const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
+      RoleEnum.Admin,
+      RoleEnum.Agent,
+    ]);
+    if (sitesWithRoles.length === 0) {
+      throw new UnauthorizedException(
+        'You do not have priviledged access to any sites.'
+      );
+    }
+    let siteIds = sitesWithRoles;
+    if (siteId && sitesWithRoles.includes(siteId)) {
+      siteIds = [siteId];
+    }
     const today = moment();
     const fromDate = moment(from).startOf('day');
     const toDate = moment(to).endOf('day');
@@ -378,6 +460,7 @@ export class TicketResolver {
         where: {
           status: { in: statuses },
           createdAt: { gte: from, lte: toDate.toDate() },
+          siteId: { in: siteIds },
         },
       });
       const days = toDate.diff(fromDate, 'days') + 1;
@@ -406,15 +489,24 @@ export class TicketResolver {
     return statusHistoryByDate;
   }
 
-  @Roles('Admin', 'Agent')
   @Query(() => [AgentQueue])
-  async agentQueue(): Promise<AgentQueue[]> {
+  async agentQueue(@UserEntity() user: User): Promise<AgentQueue[]> {
     let agentQueue = await this.redisCacheService.get(`agentQueue`);
     if (!agentQueue) {
       agentQueue = [];
+      const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
+        RoleEnum.Admin,
+        RoleEnum.Agent,
+      ]);
+      if (sitesWithRoles.length === 0) {
+        throw new UnauthorizedException(
+          'You do not have priviledged access to any sites.'
+        );
+      }
       const activeTickets = await this.prisma.ticket.findMany({
         where: {
           status: { in: ['Pending', 'Open', 'Reopened'] },
+          siteId: { in: sitesWithRoles },
         },
         include: { ticketAssignments: true },
       });

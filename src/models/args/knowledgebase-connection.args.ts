@@ -5,4 +5,5 @@ import ConnectionArgs from '../../common/pagination/connection-args';
 export class KnowledgebaseConnectionArgs extends ConnectionArgs {
   search?: string;
   createdById?: number;
+  siteId?: number;
 }

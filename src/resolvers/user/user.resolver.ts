@@ -4,14 +4,14 @@ import { UserEntity } from '../../decorators/user.decorator';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { User } from '../../models/user.model';
 import { PrismaService } from 'nestjs-prisma';
-import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { UserService } from 'src/services/user.service';
 import { Profile } from 'src/models/profile.model';
 import { APSService } from 'src/services/aps.service';
-import { UserWithRoles } from 'src/models/user-with-roles.model';
+import { UserWithRolesAndSites } from 'src/models/user-with-roles.model';
 import { RedisCacheService } from 'src/redisCache.service';
 import { RoleEnum } from 'src/common/enums/roles';
+import { SiteService } from 'src/services/site.service';
 
 @Resolver(() => User)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -20,14 +20,16 @@ export class UserResolver {
     private prisma: PrismaService,
     private userService: UserService,
     private apsService: APSService,
-    private redisCacheService: RedisCacheService
+    private redisCacheService: RedisCacheService,
+    private siteService: SiteService
   ) {}
 
-  @Query(() => UserWithRoles)
-  async me(@UserEntity() user: User): Promise<UserWithRoles> {
-    const userWithRoles = new UserWithRoles();
+  @Query(() => UserWithRolesAndSites)
+  async me(@UserEntity() user: User): Promise<UserWithRolesAndSites> {
+    const userWithRoles = new UserWithRolesAndSites();
     Object.assign(userWithRoles, user);
-    userWithRoles.roles = await this.userService.getUserRolesList(user.id);
+    userWithRoles.roles = await this.userService.getUserRoles(user.id);
+    userWithRoles.sites = await this.siteService.getUserSites(user.id, user);
     return userWithRoles;
   }
 
@@ -43,40 +45,48 @@ export class UserResolver {
   }
 
   /** Add app user with roles. If user does not exist in db, fetches from APS. */
-  @Roles('Admin')
   @Mutation(() => String)
   async addAppUser(
-    @Args('userId') userId: string,
-    @Args('roles', { type: () => [RoleEnum] }) roles: RoleEnum[]
+    @UserEntity() user: User,
+    @Args('userId') targetUserId: string,
+    @Args('roles', { type: () => [RoleEnum] }) roles: RoleEnum[],
+    @Args('siteId') siteId: number
   ): Promise<string> {
-    await this.userService.addAppUser(userId, roles);
+    await this.userService.checkAdmin(user.id, siteId);
+    await this.userService.addAppUser(targetUserId, roles, siteId);
     return 'App user added.';
   }
 
   /** Remove role from user. */
-  @Roles('Admin')
   @Mutation(() => String)
   async removeUserRole(
-    @Args('userId') userId: number,
-    @Args('role', { type: () => RoleEnum }) role: RoleEnum
+    @UserEntity() user: User,
+    @Args('userId') targetUserId: number,
+    @Args('role', { type: () => RoleEnum }) role: RoleEnum,
+    @Args('siteId') siteId: number
   ): Promise<string> {
-    await this.prisma.userRole.deleteMany({ where: { userId, role } });
-    await this.redisCacheService.del(`roles-${userId}`);
+    await this.userService.checkAdmin(user.id, siteId);
+    await this.prisma.userRole.deleteMany({
+      where: { userId: targetUserId, role, siteId },
+    });
+    await this.redisCacheService.del(`roles-${targetUserId}`);
     return 'User role removed.';
   }
 
   /** Add user role. */
-  @Roles('Admin')
   @Mutation(() => String)
   async addUserRole(
-    @Args('userId') userId: number,
-    @Args('role', { type: () => RoleEnum }) role: RoleEnum
+    @UserEntity() user: User,
+    @Args('userId') targetUserId: number,
+    @Args('role', { type: () => RoleEnum }) role: RoleEnum,
+    @Args('siteId') siteId: number
   ): Promise<string> {
+    await this.userService.checkAdmin(user.id, siteId);
     try {
       await this.prisma.userRole.create({
-        data: { userId, role },
+        data: { userId: targetUserId, role, siteId },
       });
-      await this.redisCacheService.del(`roles-${userId}`);
+      await this.redisCacheService.del(`roles-${targetUserId}`);
       return 'User role removed.';
     } catch (e) {
       console.log(e);
@@ -105,16 +115,16 @@ export class UserResolver {
     }
   }
 
-  @Roles('Admin')
   @Query(() => [User])
-  async appUsers(): Promise<User[]> {
+  async appUsers(
+    @UserEntity() user: User,
+    @Args('siteId') siteId: number
+  ): Promise<User[]> {
+    await this.userService.checkAdmin(user.id, siteId);
     const users: any = await this.prisma.user.findMany({
-      where: { roles: { some: { role: { in: ['Agent', 'Admin'] } } } },
-      include: { roles: { orderBy: { role: 'asc' } } },
+      where: { roles: { some: { role: { in: ['Agent', 'Admin'] }, siteId } } },
+      include: { roles: { where: { siteId }, orderBy: { role: 'asc' } } },
       orderBy: { rcno: 'asc' },
-    });
-    users.forEach((user) => {
-      user.roles = user.roles.map((role) => role.role);
     });
     return users;
   }

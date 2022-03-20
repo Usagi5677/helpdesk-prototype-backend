@@ -3,10 +3,12 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
 import { Site } from 'src/models/site.model';
+import { RoleEnum } from 'src/common/enums/roles';
 @Injectable()
 export class SiteService {
   constructor(
@@ -45,6 +47,18 @@ export class SiteService {
     return hasAccess;
   }
 
+  async checkSiteAccess(
+    userId: number,
+    siteId: number,
+    user?: User,
+    site?: Site
+  ) {
+    const hasSiteAccess = await this.hasSiteAccess(userId, siteId, user, site);
+    if (!hasSiteAccess) {
+      throw new UnauthorizedException('You do not have access to this site.');
+    }
+  }
+
   async getUserSites(userId: number, user?: User): Promise<Site[]> {
     let sites = (await this.redisCacheService.get(
       `userSites-${userId}}`
@@ -54,29 +68,43 @@ export class SiteService {
         user = await this.prisma.user.findFirst({ where: { id: userId } });
       }
       const allSites = await this.prisma.site.findMany();
-      if (user.isSuperAdmin) sites = allSites;
-      const publicSites = [];
-      const remainingSites = [];
-      allSites.forEach((site) => {
-        if (site.mode === 'Public') publicSites.push(site);
-        else remainingSites.push(site);
-      });
-      const remainingSiteRoles = await this.prisma.userRole.findMany({
-        where: {
-          userId,
-          siteId: { in: remainingSites.map((site) => site.id) },
-        },
-      });
-      const remainingSiteRolesSiteIds = [
-        ...new Set(remainingSiteRoles.map((role) => role.siteId)),
-      ];
-      const sitesWithRoles = remainingSites.filter((site) =>
-        remainingSiteRolesSiteIds.includes(site.id)
-      );
-      sites = [...publicSites, ...sitesWithRoles];
+      if (user.isSuperAdmin) {
+        sites = allSites;
+      } else {
+        const publicSites = [];
+        const remainingSites = [];
+        allSites.forEach((site) => {
+          if (site.mode === 'Public') publicSites.push(site);
+          else remainingSites.push(site);
+        });
+        const remainingSiteRoles = await this.prisma.userRole.findMany({
+          where: {
+            userId,
+            siteId: { in: remainingSites.map((site) => site.id) },
+          },
+        });
+        const remainingSiteRolesSiteIds = [
+          ...new Set(remainingSiteRoles.map((role) => role.siteId)),
+        ];
+        const sitesWithRoles = remainingSites.filter((site) =>
+          remainingSiteRolesSiteIds.includes(site.id)
+        );
+        sites = [...publicSites, ...sitesWithRoles];
+      }
       await this.redisCacheService.setForMonth(`userSites-${userId}}`, sites);
     }
     return sites;
+  }
+
+  async sitesWithRoles(userId: number, roles: RoleEnum[]): Promise<number[]> {
+    const userRoles = await this.prisma.userRole.findMany({
+      where: {
+        userId,
+        role: { in: roles },
+      },
+    });
+    const siteIds = [...new Set(userRoles.map((ur) => ur.siteId))];
+    return siteIds;
   }
 
   async invalidateSitesCache() {

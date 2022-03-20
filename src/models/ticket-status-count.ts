@@ -12,4 +12,6 @@ export class TicketStatusCount {
 
   @Field({ nullable: true, name: 'date' })
   createdAt?: Date;
+
+  siteId?: number;
 }

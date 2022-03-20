@@ -6,4 +6,5 @@ export class TicketStatusHistoryConnectionArgs {
   statuses?: Status[];
   from: Date;
   to: Date;
+  siteId?: number;
 }
