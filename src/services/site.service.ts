@@ -30,15 +30,19 @@ export class SiteService {
         user = await this.prisma.user.findFirst({ where: { id: userId } });
       }
       if (user.isSuperAdmin) hasAccess = true;
-      if (!site) {
-        site = await this.prisma.site.findFirst({ where: { id: siteId } });
+      else {
+        if (!site) {
+          site = await this.prisma.site.findFirst({ where: { id: siteId } });
+        }
+        if (site.mode === 'Public') hasAccess = true;
+        else {
+          const siteRoleCount = await this.prisma.userRole.count({
+            where: { userId, siteId },
+          });
+          if (siteRoleCount > 0) hasAccess = true;
+          else hasAccess = false;
+        }
       }
-      if (site.mode === 'Public') hasAccess = true;
-      const siteRoleCount = await this.prisma.userRole.count({
-        where: { userId, siteId },
-      });
-      if (siteRoleCount > 0) hasAccess = true;
-      hasAccess = false;
       await this.redisCacheService.setForMonth(
         `hasSiteAccess-${userId}-${siteId}`,
         hasAccess
