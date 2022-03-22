@@ -108,9 +108,9 @@ export class AttachmentController {
     );
     const fileData = file.data;
     res.set({
-      'Content-Disposition': `inline; filename=${
+      'Content-Disposition': `inline; filename="${
         attachment.originalName ?? attachment.sharepointFileName
-      }`,
+      }"`,
       'Content-Type': attachment.mimeType ?? null,
     });
     res.end(fileData);
