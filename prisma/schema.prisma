@@ -17,7 +17,7 @@ model Site {
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   name            String
-  code            String                @unique @default("ICT")
+  code            String                @unique
   mode            String                @default("Public")
   isEnabled       Boolean               @default(true)
   userRoles       UserRole[]
