@@ -30,6 +30,8 @@ import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 import { Cron } from '@nestjs/schedule';
 import { TicketStatusCount } from 'src/models/ticket-status-count';
 import { ConfigService } from '@nestjs/config';
+import { SiteService } from './site.service';
+import { RoleEnum } from 'src/common/enums/roles';
 @Injectable()
 export class TicketService {
   private readonly logger = new Logger(TicketService.name);
@@ -39,14 +41,15 @@ export class TicketService {
     private notificationService: NotificationService,
     private readonly redisCacheService: RedisCacheService,
     @Inject(PUB_SUB) private readonly pubSub: RedisPubSub,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private siteService: SiteService
   ) {}
 
   //** Create category. */
-  async createCategory(name: string) {
+  async createCategory(name: string, siteId: number) {
     try {
       await this.prisma.category.create({
-        data: { name },
+        data: { name, siteId },
       });
     } catch (e) {
       console.log(e);
@@ -82,14 +85,17 @@ export class TicketService {
 
   //** Get categories. Results are paginated. User cursor argument to go forward/backward. */
   async getCategoriesWithPagination(
+    user: User,
     args: CategoryConnectionArgs
   ): Promise<PaginatedCategory> {
     const { limit, offset } = getPagingParameters(args);
     const limitPlusOne = limit + 1;
-    const { name } = args;
+    const { name, siteId } = args;
+    await this.userService.checkAdminOrAgent(user.id, siteId);
     const where: any = {
       AND: [
         { name: { contains: name ?? '', mode: 'insensitive' } },
+        { siteId },
         { active: true },
       ],
     };
@@ -119,19 +125,33 @@ export class TicketService {
     };
   }
 
+  async categoriesWithAccess(user): Promise<Category[]> {
+    const sitesWithAccess = await this.siteService.getUserSites(user.id, user);
+    const siteIdsWithAccess = sitesWithAccess.map((site) => site.id);
+    return await this.prisma.category.findMany({
+      where: { siteId: { in: siteIdsWithAccess }, active: true },
+      include: { site: true },
+    });
+  }
+
   //** Search categories. */
-  async searchCategories(query: string): Promise<Category[]> {
+  async searchCategories(query: string, siteId: number): Promise<Category[]> {
     const take = 10;
     const contains = query.trim();
     return await this.prisma.category.findMany({
-      where: { name: { contains, mode: 'insensitive' } },
+      where: { name: { contains, mode: 'insensitive' }, siteId },
       take,
       orderBy: { name: 'asc' },
     });
   }
 
   //** Create ticket. */
-  async createTicket(user: User, title: string, body: string): Promise<number> {
+  async createTicket(
+    user: User,
+    title: string,
+    body: string,
+    siteId: number
+  ): Promise<number> {
     try {
       const ticket = await this.prisma.ticket.create({
         data: {
@@ -139,6 +159,7 @@ export class TicketService {
           title,
           body,
           ticketFollowings: { create: [{ userId: user.id }] },
+          siteId,
         },
       });
       await this.createComment(user, ticket.id, body, 'Body');
@@ -263,10 +284,13 @@ export class TicketService {
 
   //** Add follower to ticket. */
   async addFollower(user: User, ticketId: number, newFollowerUserId: string) {
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
     });
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(
+      user.id,
+      ticket.siteId
+    );
     if (!isAdminOrAgent) {
       if (ticket.createdById !== user.id) {
         throw new UnauthorizedException('Not authorized to add followers.');
@@ -326,10 +350,13 @@ export class TicketService {
     ticketId: number,
     deletingFollowerId: number
   ) {
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
     });
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(
+      user.id,
+      ticket.siteId
+    );
     if (!isAdminOrAgent) {
       if (ticket.createdById !== user.id) {
         throw new UnauthorizedException('Not authorized to remove followers.');
@@ -351,8 +378,13 @@ export class TicketService {
   }
 
   //** Assign agent to ticket. */
-  async assignAgents(user: User, ticketId: number, agentIds: number[]) {
-    const isAdmin = await this.userService.isAdmin(user.id);
+  async assignAgents(
+    user: User,
+    ticketId: number,
+    agentIds: number[],
+    isAdmin: boolean,
+    siteId: number
+  ) {
     // Agents can only assign themselves to ticket.
     if (!isAdmin) {
       if (agentIds.length > 1 && agentIds[0] !== user.id) {
@@ -364,9 +396,9 @@ export class TicketService {
 
     // Check if the users being assigned are agents.
     for (const agentId of agentIds) {
-      const isAgent = await this.userService.isAgent(agentId);
+      const isAgent = await this.userService.isAgent(agentId, siteId);
       if (!isAgent) {
-        throw new BadRequestException(`User is not an agent.`);
+        throw new BadRequestException(`User is not an agent of this site.`);
       }
     }
 
@@ -430,7 +462,12 @@ export class TicketService {
   }
 
   //** Set ticket owner agent. */
-  async setOwner(user: User, ticketId: number, agentId: number) {
+  async setOwner(
+    user: User,
+    ticketId: number,
+    agentId: number,
+    siteId: number
+  ) {
     const ticketAssignments = await this.prisma.ticketAssignment.findMany({
       where: { ticketId },
     });
@@ -448,7 +485,7 @@ export class TicketService {
     // Check for current owner of ticket.
     const currentOwner = ticketAssignments.find((ta) => ta.isOwner);
     // Check if requesting user is an admin
-    const isAdmin = await this.userService.isAdmin(user.id);
+    const isAdmin = await this.userService.isAdmin(user.id, siteId);
     // Prevent if requesting user is not an admin or the current owner
     if (!isAdmin && currentOwner.userId !== user.id) {
       throw new UnauthorizedException(
@@ -477,8 +514,13 @@ export class TicketService {
   }
 
   //** Remove agent from ticket. */
-  async unassignAgent(user: User, ticketId: number, agentId: number) {
-    const isAdmin = await this.userService.isAdmin(user.id);
+  async unassignAgent(
+    user: User,
+    ticketId: number,
+    agentId: number,
+    siteId: number
+  ) {
+    const isAdmin = await this.userService.isAdmin(user.id, siteId);
     // Agents can only remove themselves from ticket.
     if (!isAdmin) {
       if (user.id !== agentId) {
@@ -675,7 +717,13 @@ export class TicketService {
     userId: number,
     ticketId: number
   ): Promise<[boolean, TicketFollowing]> {
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(userId);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(
+      userId,
+      ticket.siteId
+    );
     let ticketFollowing: TicketFollowing = null;
     if (!isAdminOrAgent) {
       ticketFollowing = await this.prisma.ticketFollowing.findFirst({
@@ -703,19 +751,36 @@ export class TicketService {
       createdById,
       categoryIds,
       priority,
-      self,
       from,
       to,
       assignedToId,
       followingId,
+      siteId,
+      all,
     } = args;
 
-    // Only these roles can see all results, others can only see thier own tickets
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
-    if (!self && !isAdminOrAgent) {
-      throw new UnauthorizedException('Unauthorized.');
-    }
     const where: any = { AND: [] };
+    if (siteId && all) {
+      const sitesWithRoles = await this.siteService.sitesWithRoles(
+        user.id,
+        [RoleEnum.Admin, RoleEnum.Agent],
+        user
+      );
+      if (sitesWithRoles.includes(siteId)) {
+        where.AND.push({ siteId });
+      }
+    } else if (all) {
+      const sitesWithRoles = await this.siteService.sitesWithRoles(
+        user.id,
+        [RoleEnum.Admin, RoleEnum.Agent],
+        user
+      );
+      where.AND.push({ siteId: { in: sitesWithRoles } });
+    } else if (siteId) {
+      where.AND.push({ siteId });
+    }
+    console.log(where.AND);
+    console.log(where.AND[0]);
     if (createdById) {
       where.AND.push({ createdById });
     }
@@ -770,6 +835,7 @@ export class TicketService {
         ticketCategories: { include: { category: true } },
         ticketAssignments: { include: { user: true } },
         checklistItems: { orderBy: { id: 'asc' } },
+        site: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -816,7 +882,10 @@ export class TicketService {
       include: { ticketFollowings: true },
     });
     if (!ticket) return false;
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(
+      user.id,
+      ticket.siteId
+    );
     if (
       isAdminOrAgent ||
       ticket.ticketFollowings.map((tf) => tf.userId).includes(user.id)
@@ -837,10 +906,14 @@ export class TicketService {
         ticketFollowings: { include: { user: true } },
         comments: true,
         attachments: true,
+        site: true,
       },
     });
     if (!ticket) throw new BadRequestException('Ticket not found.');
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
+    const isAdminOrAgent = await this.userService.isAdminOrAgent(
+      user.id,
+      ticket.siteId
+    );
     if (
       !isAdminOrAgent &&
       ticket.createdById !== user.id &&
@@ -881,7 +954,10 @@ export class TicketService {
     userId: number,
     ticketId: number
   ): Promise<boolean> {
-    const isAdmin = await this.userService.isAdmin(userId);
+    const ticket = await this.prisma.ticket.findFirst({
+      where: { id: ticketId },
+    });
+    const isAdmin = await this.userService.isAdmin(userId, ticket.siteId);
     if (isAdmin) return true;
     const isAssigned = await this.isAssignedToTicket(userId, ticketId);
     if (isAssigned) return true;
@@ -904,20 +980,29 @@ export class TicketService {
         return;
       }
     }
+    const sites = await this.prisma.site.findMany();
     const statusCounts: TicketStatusCount[] = [];
-    for (const status of Object.keys(Status) as Array<keyof typeof Status>) {
-      const count = await this.prisma.ticket.count({
-        where: {
-          status: status,
-        },
-      });
-      statusCounts.push({
-        status: Status[status],
-        count,
-      });
+    for (const site of sites) {
+      for (const status of Object.keys(Status) as Array<keyof typeof Status>) {
+        const count = await this.prisma.ticket.count({
+          where: {
+            status: status,
+            siteId: site.id,
+          },
+        });
+        statusCounts.push({
+          status: Status[status],
+          count,
+          siteId: site.id,
+        });
+      }
     }
     await this.prisma.ticketStatusHistory.createMany({
-      data: statusCounts.map((sc) => ({ status: sc.status, count: sc.count })),
+      data: statusCounts.map((sc) => ({
+        status: sc.status,
+        count: sc.count,
+        siteId: sc.siteId,
+      })),
     });
   }
 

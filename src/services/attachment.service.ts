@@ -199,7 +199,6 @@ export class AttachmentService {
       where: { ticketId, mode: isAdminOrAgent ? undefined : 'Public' },
       include: { user: true },
     });
-    console.log(attachments);
     return attachments;
   }
 }

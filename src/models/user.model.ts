@@ -1,6 +1,6 @@
 import { ObjectType } from '@nestjs/graphql';
-import { RoleEnum } from 'src/common/enums/roles';
 import { BaseModel } from './base.model';
+import { UserRole } from './user-role.model';
 
 @ObjectType()
 export class User extends BaseModel {
@@ -8,6 +8,6 @@ export class User extends BaseModel {
   fullName: string;
   userId: string;
   email: string;
-  roles?: RoleEnum[];
+  roles?: UserRole[];
   isSuperAdmin: boolean;
 }

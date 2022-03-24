@@ -4,6 +4,7 @@ import { createClient, RedisClientType } from 'redis';
 @Injectable()
 export class RedisCacheService {
   // constructor() {}
+  PREFIX = 'helpdesk';
   async connect(): Promise<RedisClientType<any>> {
     const client = createClient();
     client.on('error', (err) => console.log('Redis Client Error', err));
@@ -24,7 +25,7 @@ export class RedisCacheService {
 
   async get(key): Promise<any> {
     const client = await this.connect();
-    const valueJSON = await client.get(`helpdesk:${key}`);
+    const valueJSON = await client.get(`${this.PREFIX}:${key}`);
     const value = this.parseWithDate(valueJSON);
     client.quit();
     return value;
@@ -33,7 +34,7 @@ export class RedisCacheService {
   async set(key, value, ttl) {
     const client = await this.connect();
     const valueJSON = JSON.stringify(value);
-    await client.set(`helpdesk:${key}`, valueJSON, { EX: ttl });
+    await client.set(`${this.PREFIX}:${key}`, valueJSON, { EX: ttl });
     client.quit();
   }
 
@@ -53,15 +54,29 @@ export class RedisCacheService {
 
   async getKeys() {
     const client = await this.connect();
-    const keysWithPrefix = await client.keys('helpdesk:*');
+    const keysWithPrefix = await client.keys(`${this.PREFIX}:*`);
     client.quit();
-    return keysWithPrefix.map((k) => k.split('helpdesk:')[1]);
+    return keysWithPrefix.map((k) => k.split(`${this.PREFIX}:`)[1]);
+  }
+
+  async getKeysPattern(pattern: string) {
+    const client = await this.connect();
+    const keysWithPrefix = await client.keys(`${this.PREFIX}:${pattern}`);
+    client.quit();
+    return keysWithPrefix.map((k) => k.split(`${this.PREFIX}:`)[1]);
   }
 
   async del(key) {
     const client = await this.connect();
-    await client.del(`helpdesk:${key}`);
+    await client.del(`${this.PREFIX}:${key}`);
     client.quit();
+  }
+
+  async delPattern(pattern: string) {
+    const keys = await this.getKeysPattern(pattern);
+    for (const key of keys) {
+      await this.del(key);
+    }
   }
 
   async deleteAll() {

@@ -4,6 +4,7 @@ import { Status } from 'src/common/enums/status';
 import { BaseModel } from './base.model';
 import { Category } from './category.model';
 import { ChecklistItem } from './checklist-item.model';
+import { Site } from './site.model';
 import { User } from './user.model';
 
 @ObjectType()
@@ -22,4 +23,5 @@ export class Ticket extends BaseModel {
   ownerId?: number;
   checklistItems: ChecklistItem[];
   followers: User[];
+  site: Site;
 }

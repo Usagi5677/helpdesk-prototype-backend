@@ -6,9 +6,14 @@ import { UserGroupResolver } from './user-group.resolver';
 import { SearchResolver } from './search.resolver';
 import { APSService } from 'src/services/aps.service';
 import { APSModule } from '../profile/profile.module';
+import { SiteModule } from '../site/site.module';
 
 @Module({
-  imports: [forwardRef(() => RedisCacheModule), forwardRef(() => APSModule)],
+  imports: [
+    forwardRef(() => RedisCacheModule),
+    forwardRef(() => APSModule),
+    SiteModule,
+  ],
   providers: [
     UserResolver,
     UserGroupResolver,

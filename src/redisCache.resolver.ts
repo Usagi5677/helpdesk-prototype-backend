@@ -10,13 +10,13 @@ import { Roles } from './decorators/roles.decorator';
 export class RedisCacheResolver {
   constructor(private readonly redisCacheService: RedisCacheService) {}
 
-  @Roles('Admin')
+  @Roles('SuperAdmin')
   @Query(() => [String], { name: 'redisKeys' })
   async getKeys(): Promise<string[]> {
     return await this.redisCacheService.getKeys();
   }
 
-  @Roles('Admin')
+  @Roles('SuperAdmin')
   @Query(() => String, { name: 'redisGet', nullable: true })
   async redisGet(
     @Args('key', { type: () => String }) key: string
@@ -25,7 +25,7 @@ export class RedisCacheResolver {
     return JSON.stringify(value);
   }
 
-  @Roles('Admin')
+  @Roles('SuperAdmin')
   @Mutation(() => String, { name: 'flushRedis' })
   async flushRedis(): Promise<string> {
     await this.redisCacheService.deleteAll();

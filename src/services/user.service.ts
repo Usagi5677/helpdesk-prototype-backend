@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { User, Role, UserGroup, Prisma } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
@@ -17,12 +18,15 @@ import { APSService } from './aps.service';
 import { RoleEnum } from 'src/common/enums/roles';
 import { UserGroup as UserGroupModel } from 'src/models/user-group.model';
 import { Profile } from 'src/models/profile.model';
+import { UserRole } from 'src/models/user-role.model';
+import { SiteService } from './site.service';
 @Injectable()
 export class UserService {
   constructor(
     private prisma: PrismaService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly apsService: APSService
+    private readonly apsService: APSService,
+    private readonly siteService: SiteService
   ) {}
 
   //** Create user. Only to be called by the system, not a user. */
@@ -31,7 +35,8 @@ export class UserService {
     userId: string,
     fullName: string,
     email: string,
-    roles?: RoleEnum[]
+    roles?: RoleEnum[],
+    siteId?: number
   ): Promise<User> {
     if (!roles) roles = [];
     return await this.prisma.user.create({
@@ -40,47 +45,94 @@ export class UserService {
         userId,
         fullName,
         email,
-        roles: { create: roles.map((role) => ({ role })) },
+        roles: { create: roles.map((role) => ({ role, siteId })) },
       },
     });
   }
 
   //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */
-  async getUserRolesList(id: number): Promise<string[]> {
-    let roles = await this.redisCacheService.get(`roles-${id}`);
+  async getUserRoles(id: number): Promise<UserRole[]> {
+    const key = `roles-${id}-`;
+    let roles = await this.redisCacheService.get(key);
     if (!roles) {
-      const userRoles = await this.prisma.userRole.findMany({
+      roles = await this.prisma.userRole.findMany({
         where: { userId: id },
+        include: { site: true },
       });
-      roles = userRoles.map((r) => r.role);
-      await this.redisCacheService.setForMonth(`roles-${id}`, roles);
+      await this.redisCacheService.setForMonth(key, roles);
     }
     return roles;
   }
 
-  async userHasRole(userId: number, roles: Role[]): Promise<boolean> {
-    const userRoles = await this.getUserRolesList(userId);
+  //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */
+  async getUserSiteRoles(id: number, siteId: number): Promise<string[]> {
+    const key = `roles-${id}-${siteId}`;
+    let roles = await this.redisCacheService.get(key);
+    if (!roles) {
+      const userRoles = await this.prisma.userRole.findMany({
+        where: { userId: id, siteId },
+      });
+      roles = userRoles.map((r) => r.role);
+      await this.redisCacheService.setForMonth(key, roles);
+    }
+    return roles;
+  }
+
+  async userHasRole(
+    userId: number,
+    roles: Role[],
+    siteId: number
+  ): Promise<boolean> {
+    const userRoles = await this.getUserSiteRoles(userId, siteId);
     if (roles.some((r) => userRoles.includes(r))) return true;
     return false;
   }
 
-  async isAdminOrAgent(userId: number): Promise<boolean> {
-    return await this.userHasRole(userId, ['Admin', 'Agent']);
+  async isAdminOrAgent(userId: number, siteId: number): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({ where: { id: userId } });
+    if (user.isSuperAdmin) return true;
+    return await this.userHasRole(userId, ['Admin', 'Agent'], siteId);
   }
 
-  async isAdmin(userId: number): Promise<boolean> {
-    return await this.userHasRole(userId, ['Admin']);
+  async isAdmin(userId: number, siteId: number): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({ where: { id: userId } });
+    if (user.isSuperAdmin) return true;
+    return await this.userHasRole(userId, ['Admin'], siteId);
   }
 
-  async isAgent(userId: number): Promise<boolean> {
-    return await this.userHasRole(userId, ['Agent']);
+  async isAgent(userId: number, siteId: number): Promise<boolean> {
+    return await this.userHasRole(userId, ['Agent'], siteId);
+  }
+
+  async checkAdminOrAgent(userId: number, siteId: number) {
+    const isAdminOrAgent = await this.isAdminOrAgent(userId, siteId);
+    if (!isAdminOrAgent) {
+      throw new UnauthorizedException('You do not have access to this site.');
+    }
+  }
+  async checkAdmin(userId: number, siteId: number) {
+    const isAdmin = await this.isAdmin(userId, siteId);
+    if (!isAdmin) {
+      throw new UnauthorizedException('You do not have access to this site.');
+    }
+  }
+  async checkAgent(userId: number, siteId: number) {
+    const isAgent = await this.isAgent(userId, siteId);
+    if (!isAgent) {
+      throw new UnauthorizedException('You do not have access to this site.');
+    }
   }
 
   //** Create user group. */
-  async createUserGroup(user: User, name: string, mode: string) {
+  async createUserGroup(
+    user: User,
+    name: string,
+    mode: string,
+    siteId: number
+  ) {
     try {
       await this.prisma.userGroup.create({
-        data: { name, mode, createdById: user.id },
+        data: { name, mode, createdById: user.id, siteId },
       });
     } catch (e) {
       if (
@@ -174,13 +226,18 @@ export class UserService {
 
   //** Get user groups. Results are paginated. User cursor argument to go forward/backward. */
   async getUserGroupsWithPagination(
+    user: User,
     args: UserGroupConnectionArgs
   ): Promise<PaginatedUserGroup> {
     const { limit, offset } = getPagingParameters(args);
     const limitPlusOne = limit + 1;
-    const { name } = args;
+    const { name, siteId } = args;
+    await this.checkAdminOrAgent(user.id, siteId);
     const where: any = {
-      AND: [{ name: { contains: name ?? '', mode: 'insensitive' } }],
+      AND: [
+        { name: { contains: name ?? '', mode: 'insensitive' } },
+        { siteId },
+      ],
     };
     const userGroups = await this.prisma.userGroup.findMany({
       skip: offset,
@@ -217,8 +274,8 @@ export class UserService {
 
   //** Searches users and user groups */
   async searchUserAndGroups(
-    user: User,
     query: string,
+    siteId: number,
     onlyAgents?: boolean
   ): Promise<SearchResult[]> {
     const contains = query.trim();
@@ -228,7 +285,7 @@ export class UserService {
       users = await this.prisma.user.findMany({
         where: {
           fullName: { contains, mode: 'insensitive' },
-          roles: { some: { role: { in: ['Agent'] } } },
+          roles: { some: { role: { in: ['Agent'] }, siteId } },
         },
       });
     } else {
@@ -236,22 +293,14 @@ export class UserService {
     }
 
     const where: any = {
-      AND: [{ name: { contains, mode: 'insensitive' } }],
+      AND: [{ name: { contains, mode: 'insensitive' } }, { siteId }],
     };
     if (onlyAgents)
       where.AND.push({
         userGroupUsers: {
-          every: { user: { roles: { some: { role: 'Agent' } } } },
+          every: { user: { roles: { some: { role: 'Agent', siteId } } } },
         },
       });
-    // Only these roles can see all user groups
-    const isAdminOrAgent = await this.isAdminOrAgent(user.id);
-    if (!isAdminOrAgent) {
-      // Otherwise show only public groups
-      where.AND.push({
-        mode: 'Public',
-      });
-    }
     const userGroups = await this.prisma.userGroup.findMany({
       where,
       take: 5,
@@ -283,7 +332,7 @@ export class UserService {
     return searchResults;
   }
 
-  async addAppUser(userId: string, roles: RoleEnum[]) {
+  async addAppUser(userId: string, roles: RoleEnum[], siteId) {
     const user = await this.prisma.user.findFirst({
       where: { userId },
       include: { roles: true },
@@ -300,16 +349,23 @@ export class UserService {
         profile.userId,
         profile.fullName,
         profile.email,
-        roles
+        roles,
+        siteId
       );
       return;
     }
 
-    // If user does exist, remove existing roles and add new roles.
-    await this.prisma.userRole.deleteMany({ where: { userId: user.id } });
-    await this.prisma.userRole.createMany({
-      data: roles.map((role) => ({ userId: user.id, role })),
-    });
+    try {
+      // If user does exist, remove existing roles and add new roles.
+      await this.prisma.userRole.deleteMany({
+        where: { userId: user.id, siteId },
+      });
+      await this.prisma.userRole.createMany({
+        data: roles.map((role) => ({ userId: user.id, role, siteId })),
+      });
+    } catch (e) {
+      console.log(e);
+    }
     await this.redisCacheService.del(`user-uuid-${userId}`);
     await this.redisCacheService.del(`roles-${user.id}`);
   }

@@ -1,13 +1,11 @@
 import { PrismaService } from 'nestjs-prisma';
 import {
   BadRequestException,
-  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { RedisCacheService } from 'src/redisCache.service';
 import {
   connectionFromArraySlice,
   getPagingParameters,
@@ -16,20 +14,14 @@ import { UserService } from './user.service';
 import { KnowledgebaseConnectionArgs } from 'src/models/args/knowledgebase-connection.args';
 import { PaginatedKnowledgebase } from 'src/models/pagination/knowledgebase-connection.model';
 import { Knowledgebase } from 'src/models/knowledgebase.model';
-import { NotificationService } from './notification.service';
-import { RedisPubSub } from 'graphql-redis-subscriptions';
-import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
-import { ConfigService } from '@nestjs/config';
+import { SiteService } from './site.service';
 
 @Injectable()
 export class KnowledgebaseService {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
-    private readonly redisCacheService: RedisCacheService,
-    private readonly notificationService: NotificationService,
-    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub,
-    private configService: ConfigService
+    private siteService: SiteService
   ) {}
 
   //** Create knowledgebase. */
@@ -37,7 +29,8 @@ export class KnowledgebaseService {
     user: User,
     title: string,
     body: string,
-    mode: string
+    mode: string,
+    siteId: number
   ) {
     try {
       await this.prisma.information.create({
@@ -46,26 +39,9 @@ export class KnowledgebaseService {
           title,
           body,
           mode,
+          siteId,
         },
       });
-      /*
-      await this.notificationService.create({
-        userId: user.id,
-        body: body,
-      });
-      await this.notificationService.sendEmailInBackground({
-        to: 'ibrahim.naish@mtcc.com.mv',
-        subject: 'Knowledgebase created',
-        html: emailTemplate({
-          text: `You have created a new <strong>knowledgebase</strong>`,
-          extraInfo: `Submitted By: <strong>${user.rcno} - ${user.fullName}</strong>`,
-          callToAction: {
-            link: `${this.configService.get('APP_URL')}/knowledgebase`,
-            title: 'View Knowledgebase',
-          },
-        }),
-      });
-      */
     } catch (e) {
       console.log(e);
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -74,11 +50,19 @@ export class KnowledgebaseService {
 
   //** Change title, body of knowledgebase. */
   async changeKnowledgebase(
+    user: User,
     id: number,
     title: string,
     body: string,
     mode: string
   ) {
+    const knowledgebase = await this.prisma.information.findFirst({
+      where: { id },
+    });
+    if (!knowledgebase) {
+      throw new BadRequestException('Knowledgebase does not exist.');
+    }
+    await this.userService.checkAdminOrAgent(user.id, knowledgebase.siteId);
     try {
       await this.prisma.information.update({
         data: {
@@ -105,6 +89,7 @@ export class KnowledgebaseService {
       throw new InternalServerErrorException('Unexpected error occured.');
     }
   }
+
   //** Get single knowledgebase. */
   async singleKnowledgebase(
     user: User,
@@ -114,16 +99,13 @@ export class KnowledgebaseService {
       where: { id: knowledgebaseId },
       include: {
         createdBy: true,
+        site: true,
       },
     });
-    if (!knowledgebase)
+    if (!knowledgebase) {
       throw new BadRequestException('Knowledge base not found.');
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
-    if (!isAdminOrAgent) {
-      throw new UnauthorizedException(
-        'You do not have access to this knowledge base.'
-      );
     }
+    await this.siteService.checkSiteAccess(user.id, knowledgebase.siteId, user);
     return knowledgebase;
   }
 
@@ -134,16 +116,28 @@ export class KnowledgebaseService {
   ): Promise<PaginatedKnowledgebase> {
     const { limit, offset } = getPagingParameters(args);
     const limitPlusOne = limit + 1;
-    const { createdById, search } = args;
+    const { createdById, search, siteId } = args;
 
-    // Only these roles can see all private results, others can only see only public knowledgebase
-    const isAdminOrAgent = await this.userService.isAdminOrAgent(user.id);
-    const where: any = { AND: [] };
-    if (!isAdminOrAgent) {
-      where.AND.push({
-        mode: 'Public',
-      });
+    // Show only public knowledgebases and knowledgebases in sites with access
+    const sitesWithAccess = await this.siteService.getUserSites(user.id, user);
+    const sitesIdsWithAccess = sitesWithAccess.map((site) => site.id);
+
+    const where: any = {
+      AND: [
+        {
+          OR: [{ mode: 'Public' }, { siteId: { in: sitesIdsWithAccess } }],
+        },
+      ],
+    };
+
+    if (siteId) {
+      if (sitesIdsWithAccess.includes(siteId)) {
+        where.AND.push({ siteId });
+      } else {
+        throw new UnauthorizedException('You do now have access to this site.');
+      }
     }
+
     if (createdById) {
       where.AND.push({ createdById });
     }
@@ -166,7 +160,9 @@ export class KnowledgebaseService {
       where,
       include: {
         createdBy: true,
+        site: true,
       },
+      orderBy: { id: 'desc' },
     });
 
     const count = await this.prisma.information.count({ where });

@@ -1,42 +1,39 @@
-import {
-  InternalServerErrorException,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common';
+import { InternalServerErrorException, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
-import { Roles } from 'src/decorators/roles.decorator';
-import { RolesGuard } from 'src/guards/roles.guard';
 import { UserEntity } from 'src/decorators/user.decorator';
 import { User } from 'src/models/user.model';
 import { UserService } from 'src/services/user.service';
-import { PrismaService } from 'nestjs-prisma';
 import { KnowledgebaseService } from 'src/services/knowledgebase.service';
 import { KnowledgebaseConnectionArgs } from 'src/models/args/knowledgebase-connection.args';
 import { PaginatedKnowledgebase } from 'src/models/pagination/knowledgebase-connection.model';
 import { Knowledgebase } from 'src/models/knowledgebase.model';
+import { PrismaService } from 'nestjs-prisma';
 
 @Resolver(() => Knowledgebase)
-@UseGuards(GqlAuthGuard, RolesGuard)
+@UseGuards(GqlAuthGuard)
 export class KnowledgebaseResolver {
   constructor(
     private knowledgebaseService: KnowledgebaseService,
     private userService: UserService,
     private prisma: PrismaService
   ) {}
-  @Roles('Admin', 'Agent')
+
   @Mutation(() => String)
   async createKnowledgebase(
     @UserEntity() user: User,
     @Args('title') title: string,
     @Args('body') body: string,
-    @Args('mode') mode: string
+    @Args('mode') mode: string,
+    @Args('siteId') siteId: number
   ): Promise<string> {
+    await this.userService.checkAdminOrAgent(user.id, siteId);
     await this.knowledgebaseService.createKnowledgebase(
       user,
       title,
       body,
-      mode
+      mode,
+      siteId
     );
     return `Successfully created knowledge base.`;
   }
@@ -63,14 +60,15 @@ export class KnowledgebaseResolver {
     );
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async removeKnowledgebase(
     @UserEntity() user: User,
     @Args('knowledgebaseId') knowledgebaseId: number
   ): Promise<string> {
-    const isAdminOrAgent = this.userService.isAdminOrAgent(user.id);
-    if (!isAdminOrAgent) throw new UnauthorizedException('Unauthorized.');
+    const knowledegebase = await this.prisma.information.findFirst({
+      where: { id: knowledgebaseId },
+    });
+    await this.userService.checkAdmin(user.id, knowledegebase.siteId);
     try {
       await this.knowledgebaseService.deleteKnowledgebase(knowledgebaseId);
       return `Knowledge base removed.`;
@@ -80,15 +78,21 @@ export class KnowledgebaseResolver {
     }
   }
 
-  @Roles('Admin', 'Agent')
   @Mutation(() => String)
   async editKnowledgebase(
+    @UserEntity() user: User,
     @Args('id') id: number,
     @Args('title') title: string,
     @Args('body') body: string,
     @Args('mode') mode: string
   ): Promise<string> {
-    await this.knowledgebaseService.changeKnowledgebase(id, title, body, mode);
+    await this.knowledgebaseService.changeKnowledgebase(
+      user,
+      id,
+      title,
+      body,
+      mode
+    );
     return `Knowledge base updated.`;
   }
 }

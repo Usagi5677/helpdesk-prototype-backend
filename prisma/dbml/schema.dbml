@@ -7,8 +7,15 @@ Table Site {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   name String [not null]
+  code String [unique, not null]
   mode String [not null, default: 'Public']
   isEnabled Boolean [not null, default: true]
+  userRoles UserRole [not null]
+  userGroups UserGroup [not null]
+  tickets Ticket [not null]
+  categories Category [not null]
+  statusHistories TicketStatusHistory [not null]
+  informations Information [not null]
 }
 
 Table User {
@@ -51,6 +58,8 @@ Table Information {
   mode String [not null]
   title String [not null]
   body String [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 }
 
 Table UserRole {
@@ -60,9 +69,11 @@ Table UserRole {
   userId Int [not null]
   user User [not null]
   role Role [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 
   indexes {
-    (userId, role) [unique]
+    (userId, role, siteId) [unique]
   }
 }
 
@@ -74,6 +85,8 @@ Table UserGroup {
   mode String [not null, default: 'Private']
   createdById Int [not null]
   userGroupUsers UserGroupUser [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 }
 
 Table UserGroupUser {
@@ -96,6 +109,8 @@ Table Ticket {
   updatedAt DateTime [not null]
   createdById Int [not null]
   createdBy User [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
   status TicketStatus [not null, default: 'Pending']
   statusChangedAt DateTime
   title String [not null]
@@ -118,6 +133,8 @@ Table Category {
   name String [not null]
   active Boolean [not null, default: true]
   tickets TicketCategory [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 }
 
 Table TicketCategory {
@@ -203,15 +220,18 @@ Table TicketStatusHistory {
   createdAt DateTime [default: `now()`, not null]
   status TicketStatus [not null]
   count Int [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 
   indexes {
-    (createdAt, status) [unique]
+    (createdAt, status, siteId) [unique]
   }
 }
 
 Enum Role {
   Agent
   Admin
+  User
 }
 
 Enum TicketStatus {
@@ -232,13 +252,23 @@ Ref: Notification.userId > User.id
 
 Ref: Information.createdById > User.id
 
+Ref: Information.siteId > Site.id
+
 Ref: UserRole.userId > User.id
+
+Ref: UserRole.siteId > Site.id
+
+Ref: UserGroup.siteId > Site.id
 
 Ref: UserGroupUser.userId > User.id
 
 Ref: UserGroupUser.userGroupId > UserGroup.id
 
 Ref: Ticket.createdById > User.id
+
+Ref: Ticket.siteId > Site.id
+
+Ref: Category.siteId > Site.id
 
 Ref: TicketCategory.ticketId > Ticket.id
 
@@ -263,3 +293,5 @@ Ref: TicketComment.ticketId > Ticket.id
 Ref: TicketAttachment.userId > User.id
 
 Ref: TicketAttachment.ticketId > Ticket.id
+
+Ref: TicketStatusHistory.siteId > Site.id

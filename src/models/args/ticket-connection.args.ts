@@ -11,9 +11,10 @@ export class TicketConnectionArgs extends ConnectionArgs {
   createdByUserId?: string;
   categoryIds?: number[];
   priority?: Priority;
-  self?: boolean;
   from?: Date;
   to?: Date;
   assignedToId?: number;
   followingId?: number;
+  siteId?: number;
+  all?: boolean;
 }
