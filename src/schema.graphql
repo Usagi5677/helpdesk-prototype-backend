@@ -345,6 +345,7 @@ type Query {
 enum Role {
   Admin
   Agent
+  User
 }
 
 type SearchResult {
