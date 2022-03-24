@@ -12,6 +12,7 @@ type Category {
   createdAt: Date!
   id: Int!
   name: String!
+  site: Site
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
@@ -86,7 +87,7 @@ type Mutation {
   changeCategoryName(id: Int!, name: String!): String!
   createCategory(name: String!, siteId: Int!): String!
   createKnowledgebase(body: String!, mode: String!, siteId: Int!, title: String!): String!
-  createSite(mode: String!, name: String!): String!
+  createSite(code: String!, mode: String!, name: String!): String!
   createTicket(body: String!, siteId: Int!, title: String!): Int!
   createUserGroup(mode: String!, name: String!, siteId: Int!): String!
   deleteCategory(id: Int!): String!
@@ -95,7 +96,7 @@ type Mutation {
   deleteUserGroup(id: Int!): String!
   editChecklistItem(description: String!, id: Int!): String!
   editKnowledgebase(body: String!, id: Int!, mode: String!, title: String!): String!
-  editSite(id: Int!, mode: String!, name: String!): String!
+  editSite(code: String!, id: Int!, mode: String!, name: String!): String!
   editUserGroup(id: Int!, mode: String!, name: String!): String!
   flushRedis: String!
   giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!
@@ -171,7 +172,7 @@ type Profile {
 }
 
 type Query {
-  agentQueue: [AgentQueue!]!
+  agentQueue(siteId: Int): [AgentQueue!]!
   appUsers(siteId: Int!): [User!]!
   assignedTickets(
     """Paginate after opaque cursor"""
@@ -213,6 +214,7 @@ type Query {
     name: String
     siteId: Int!
   ): PaginatedCategory!
+  categoriesWithAccess: [Category!]!
   comments(ticketId: Int!): [TicketComment!]!
   followingTickets(
     """Paginate after opaque cursor"""
@@ -288,7 +290,7 @@ type Query {
   redisKeys: [String!]!
   searchAPSUsers(query: String!): [User!]!
   searchUser(query: String!): [User!]!
-  searchUsersAndGroups(onlyAgents: Boolean!, query: String!): [SearchResult!]!
+  searchUsersAndGroups(onlyAgents: Boolean!, query: String!, siteId: Int!): [SearchResult!]!
   singleKnowledgebase(knowledgebaseId: Int!): Knowledgebase!
   sites: [Site!]!
   ticket(ticketId: Int!): Ticket!
@@ -353,6 +355,8 @@ type SearchResult {
 }
 
 type Site {
+  code: String!
+
   """Identifies the date and time when the object was created."""
   createdAt: Date!
   id: Int!
@@ -393,6 +397,7 @@ type Ticket {
   ownerId: Int
   priority: Priority
   rating: Int
+  site: Site!
   started: Boolean!
   status: Status!
   statusChangedAt: Date

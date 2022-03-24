@@ -19,9 +19,10 @@ export class SiteResolver {
   @Mutation(() => String)
   async createSite(
     @Args('name') name: string,
+    @Args('code') code: string,
     @Args('mode') mode: string
   ): Promise<string> {
-    await this.siteService.createSite(name, mode);
+    await this.siteService.createSite(name, code, mode);
     return `Successfully created site ${name}.`;
   }
 
@@ -30,10 +31,11 @@ export class SiteResolver {
   async editSite(
     @Args('id') id: number,
     @Args('name') name: string,
+    @Args('code') code: string,
     @Args('mode') mode: string
     // @Args('isEnabled') isEnabled: boolean
   ): Promise<string> {
-    await this.siteService.editSite(id, name, mode);
+    await this.siteService.editSite(id, name, code, mode);
     return `Successfully updated site ${name}.`;
   }
 
