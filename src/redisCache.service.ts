@@ -72,6 +72,13 @@ export class RedisCacheService {
     client.quit();
   }
 
+  async delPattern(pattern: string) {
+    const keys = await this.getKeysPattern(pattern);
+    for (const key of keys) {
+      await this.del(key);
+    }
+  }
+
   async deleteAll() {
     const keys = await this.getKeys();
     keys.forEach(async (key) => {
