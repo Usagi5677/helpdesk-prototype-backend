@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, Role, User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
 import { Site } from 'src/models/site.model';
 import { RoleEnum } from 'src/common/enums/roles';
