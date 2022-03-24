@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Role, User } from '@prisma/client';
+import { Prisma, Role, User } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
 import { Site } from 'src/models/site.model';
 import { RoleEnum } from 'src/common/enums/roles';
@@ -64,14 +64,15 @@ export class SiteService {
   }
 
   async getUserSites(userId: number, user?: User): Promise<Site[]> {
-    let sites = (await this.redisCacheService.get(
-      `userSites-${userId}}`
-    )) as Site[];
+    const key = `userSites-${userId}`;
+    let sites = (await this.redisCacheService.get(key)) as Site[];
     if (!sites) {
       if (!user) {
         user = await this.prisma.user.findFirst({ where: { id: userId } });
       }
-      const allSites = await this.prisma.site.findMany();
+      const allSites = await this.prisma.site.findMany({
+        orderBy: { id: 'asc' },
+      });
       if (user.isSuperAdmin) {
         sites = allSites;
       } else {
@@ -86,6 +87,7 @@ export class SiteService {
             userId,
             siteId: { in: remainingSites.map((site) => site.id) },
           },
+          orderBy: { id: 'asc' },
         });
         const remainingSiteRolesSiteIds = [
           ...new Set(remainingSiteRoles.map((role) => role.siteId)),
@@ -95,30 +97,40 @@ export class SiteService {
         );
         sites = [...publicSites, ...sitesWithRoles];
       }
-      await this.redisCacheService.setForMonth(`userSites-${userId}}`, sites);
+      await this.redisCacheService.setForMonth(key, sites);
     }
     return sites;
   }
 
-  async sitesWithRoles(userId: number, roles: RoleEnum[]): Promise<number[]> {
-    const userRoles = await this.prisma.userRole.findMany({
-      where: {
-        userId,
-        role: { in: roles },
-      },
-    });
-    const siteIds = [...new Set(userRoles.map((ur) => ur.siteId))];
+  async sitesWithRoles(
+    userId: number,
+    roles: RoleEnum[],
+    user?: User
+  ): Promise<number[]> {
+    if (!user) {
+      user = await this.prisma.user.findFirst({ where: { id: userId } });
+    }
+    let siteIds = [];
+    if (user.isSuperAdmin) {
+      const sites = await this.prisma.site.findMany({ select: { id: true } });
+      siteIds = sites.map((site) => site.id);
+    } else {
+      const userRoles = await this.prisma.userRole.findMany({
+        where: {
+          userId,
+          role: { in: roles },
+        },
+      });
+      siteIds = [...new Set(userRoles.map((ur) => ur.siteId))];
+    }
     return siteIds;
   }
 
   async invalidateSitesCache() {
-    const sitesKeys = await this.redisCacheService.getKeysPattern('userSites-');
-    for (const key in sitesKeys) {
-      await this.redisCacheService.del(key);
-    }
+    await this.redisCacheService.delPattern('userSites-*');
   }
 
-  async createSite(name: string, mode: string) {
+  async createSite(name: string, code: string, mode: string) {
     if (!['Public', 'Private'].includes(mode)) {
       throw new BadRequestException('Invalid mode.');
     }
@@ -126,17 +138,25 @@ export class SiteService {
       await this.prisma.site.create({
         data: {
           name,
+          code,
           mode,
         },
       });
       await this.invalidateSitesCache();
     } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException(`A site with the code already exists.`);
+      } else {
+        console.log(e);
+        throw new InternalServerErrorException('Unexpected error occured.');
+      }
     }
   }
 
-  async editSite(id: number, name: string, mode: string) {
+  async editSite(id: number, name: string, code: string, mode: string) {
     if (!['Public', 'Private'].includes(mode)) {
       throw new BadRequestException('Invalid mode.');
     }
@@ -145,13 +165,21 @@ export class SiteService {
         where: { id },
         data: {
           name,
+          code,
           mode,
         },
       });
       await this.invalidateSitesCache();
     } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException(`A site with the code already exists.`);
+      } else {
+        console.log(e);
+        throw new InternalServerErrorException('Unexpected error occured.');
+      }
     }
   }
 

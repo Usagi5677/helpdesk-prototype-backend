@@ -62,4 +62,9 @@ export class CategoryResolver {
   ) {
     return await this.ticketService.getCategoriesWithPagination(user, args);
   }
+
+  @Query(() => [Category])
+  async categoriesWithAccess(@UserEntity() user: User) {
+    return await this.ticketService.categoriesWithAccess(user);
+  }
 }

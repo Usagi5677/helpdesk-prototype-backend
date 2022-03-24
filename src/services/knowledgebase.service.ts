@@ -99,6 +99,7 @@ export class KnowledgebaseService {
       where: { id: knowledgebaseId },
       include: {
         createdBy: true,
+        site: true,
       },
     });
     if (!knowledgebase) {

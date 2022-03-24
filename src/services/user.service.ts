@@ -52,26 +52,28 @@ export class UserService {
 
   //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */
   async getUserRoles(id: number): Promise<UserRole[]> {
-    let roles = await this.redisCacheService.get(`roles-${id}`);
+    const key = `roles-${id}-`;
+    let roles = await this.redisCacheService.get(key);
     if (!roles) {
       roles = await this.prisma.userRole.findMany({
         where: { userId: id },
         include: { site: true },
       });
-      await this.redisCacheService.setForMonth(`roles-${id}`, roles);
+      await this.redisCacheService.setForMonth(key, roles);
     }
     return roles;
   }
 
   //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */
   async getUserSiteRoles(id: number, siteId: number): Promise<string[]> {
-    let roles = await this.redisCacheService.get(`roles-${id}`);
+    const key = `roles-${id}-${siteId}`;
+    let roles = await this.redisCacheService.get(key);
     if (!roles) {
       const userRoles = await this.prisma.userRole.findMany({
         where: { userId: id, siteId },
       });
       roles = userRoles.map((r) => r.role);
-      await this.redisCacheService.setForMonth(`roles-${id}`, roles);
+      await this.redisCacheService.setForMonth(key, roles);
     }
     return roles;
   }
@@ -272,8 +274,8 @@ export class UserService {
 
   //** Searches users and user groups */
   async searchUserAndGroups(
-    user: User,
     query: string,
+    siteId: number,
     onlyAgents?: boolean
   ): Promise<SearchResult[]> {
     const contains = query.trim();
@@ -283,26 +285,20 @@ export class UserService {
       users = await this.prisma.user.findMany({
         where: {
           fullName: { contains, mode: 'insensitive' },
-          roles: { some: { role: { in: ['Agent'] } } },
+          roles: { some: { role: { in: ['Agent'] }, siteId } },
         },
       });
     } else {
       users = await this.apsService.searchAPS(contains);
     }
 
-    const sitesWithAccess = await this.siteService.getUserSites(user.id, user);
-    const sitesWithAccessIds = sitesWithAccess.map((site) => site.id);
-
     const where: any = {
-      AND: [
-        { name: { contains, mode: 'insensitive' } },
-        { siteId: { in: sitesWithAccessIds } },
-      ],
+      AND: [{ name: { contains, mode: 'insensitive' } }, { siteId }],
     };
     if (onlyAgents)
       where.AND.push({
         userGroupUsers: {
-          every: { user: { roles: { some: { role: 'Agent' } } } },
+          every: { user: { roles: { some: { role: 'Agent', siteId } } } },
         },
       });
     const userGroups = await this.prisma.userGroup.findMany({

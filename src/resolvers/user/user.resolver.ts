@@ -69,7 +69,7 @@ export class UserResolver {
     await this.prisma.userRole.deleteMany({
       where: { userId: targetUserId, role, siteId },
     });
-    await this.redisCacheService.del(`roles-${targetUserId}`);
+    await this.redisCacheService.delPattern(`roles-${targetUserId}-*`);
     return 'User role removed.';
   }
 
@@ -86,7 +86,7 @@ export class UserResolver {
       await this.prisma.userRole.create({
         data: { userId: targetUserId, role, siteId },
       });
-      await this.redisCacheService.del(`roles-${targetUserId}`);
+      await this.redisCacheService.delPattern(`roles-${targetUserId}-*`);
       return 'User role removed.';
     } catch (e) {
       console.log(e);

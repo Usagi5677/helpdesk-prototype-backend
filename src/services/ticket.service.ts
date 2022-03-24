@@ -125,6 +125,15 @@ export class TicketService {
     };
   }
 
+  async categoriesWithAccess(user): Promise<Category[]> {
+    const sitesWithAccess = await this.siteService.getUserSites(user.id, user);
+    const siteIdsWithAccess = sitesWithAccess.map((site) => site.id);
+    return await this.prisma.category.findMany({
+      where: { siteId: { in: siteIdsWithAccess }, active: true },
+      include: { site: true },
+    });
+  }
+
   //** Search categories. */
   async searchCategories(query: string, siteId: number): Promise<Category[]> {
     const take = 10;
@@ -137,7 +146,12 @@ export class TicketService {
   }
 
   //** Create ticket. */
-  async createTicket(user: User, title: string, body: string): Promise<number> {
+  async createTicket(
+    user: User,
+    title: string,
+    body: string,
+    siteId: number
+  ): Promise<number> {
     try {
       const ticket = await this.prisma.ticket.create({
         data: {
@@ -145,6 +159,7 @@ export class TicketService {
           title,
           body,
           ticketFollowings: { create: [{ userId: user.id }] },
+          siteId,
         },
       });
       await this.createComment(user, ticket.id, body, 'Body');
@@ -746,22 +761,26 @@ export class TicketService {
 
     const where: any = { AND: [] };
     if (siteId && all) {
-      const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
-        RoleEnum.Admin,
-        RoleEnum.Agent,
-      ]);
+      const sitesWithRoles = await this.siteService.sitesWithRoles(
+        user.id,
+        [RoleEnum.Admin, RoleEnum.Agent],
+        user
+      );
       if (sitesWithRoles.includes(siteId)) {
         where.AND.push({ siteId });
       }
     } else if (all) {
-      const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
-        RoleEnum.Admin,
-        RoleEnum.Agent,
-      ]);
+      const sitesWithRoles = await this.siteService.sitesWithRoles(
+        user.id,
+        [RoleEnum.Admin, RoleEnum.Agent],
+        user
+      );
       where.AND.push({ siteId: { in: sitesWithRoles } });
     } else if (siteId) {
       where.AND.push({ siteId });
     }
+    console.log(where.AND);
+    console.log(where.AND[0]);
     if (createdById) {
       where.AND.push({ createdById });
     }
@@ -816,6 +835,7 @@ export class TicketService {
         ticketCategories: { include: { category: true } },
         ticketAssignments: { include: { user: true } },
         checklistItems: { orderBy: { id: 'asc' } },
+        site: true,
       },
       orderBy: { id: 'desc' },
     });
@@ -886,6 +906,7 @@ export class TicketService {
         ticketFollowings: { include: { user: true } },
         comments: true,
         attachments: true,
+        site: true,
       },
     });
     if (!ticket) throw new BadRequestException('Ticket not found.');

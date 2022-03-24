@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
-import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { TicketService } from 'src/services/ticket.service';
 import { Ticket } from 'src/models/ticket.model';
@@ -45,7 +44,7 @@ export class TicketResolver {
     @Args('siteId') siteId: number
   ): Promise<number> {
     await this.siteService.checkSiteAccess(user.id, siteId);
-    return await this.ticketService.createTicket(user, title, body);
+    return await this.ticketService.createTicket(user, title, body, siteId);
   }
 
   @Mutation(() => String)
@@ -367,10 +366,11 @@ export class TicketResolver {
   ): Promise<TicketStatusCount[]> {
     let type = 'Self';
     let siteIds = [];
-    const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
-      RoleEnum.Admin,
-      RoleEnum.Agent,
-    ]);
+    const sitesWithRoles = await this.siteService.sitesWithRoles(
+      user.id,
+      [RoleEnum.Admin, RoleEnum.Agent],
+      user
+    );
     if (sitesWithRoles.length > 0) {
       if (siteId && sitesWithRoles.includes(siteId)) {
         type = 'Site';
@@ -380,15 +380,14 @@ export class TicketResolver {
         siteIds = sitesWithRoles;
       }
     }
-    let statusCounts = await this.redisCacheService.get(
-      `statusCount${
-        type === 'Self'
-          ? `Self-${user.id}`
-          : type === 'Site'
-          ? `Site-${siteId}`
-          : `OwnSites-${user.id}`
-      }`
-    );
+    const key = `statusCount${
+      type === 'Self'
+        ? `Self-${user.id}`
+        : type === 'Site'
+        ? `Site-${siteId}`
+        : `OwnSites-${user.id}`
+    }`;
+    let statusCounts = await this.redisCacheService.get(key);
     if (!statusCounts) {
       statusCounts = [];
       for (const status of Object.keys(Status) as Array<keyof typeof Status>) {
@@ -404,16 +403,7 @@ export class TicketResolver {
           count,
         });
       }
-      await this.redisCacheService.setFor10Sec(
-        `statusCount${
-          type === 'Self'
-            ? `Self-${user.id}`
-            : type === 'Site'
-            ? `Site-${siteId}`
-            : `OwnSites-${user.id}`
-        }`,
-        statusCounts
-      );
+      await this.redisCacheService.setFor10Sec(key, statusCounts);
     }
     return statusCounts;
   }
@@ -425,10 +415,11 @@ export class TicketResolver {
   ): Promise<TicketStatusCountHistory[]> {
     let { statuses } = args;
     const { from, to, siteId } = args;
-    const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
-      RoleEnum.Admin,
-      RoleEnum.Agent,
-    ]);
+    const sitesWithRoles = await this.siteService.sitesWithRoles(
+      user.id,
+      [RoleEnum.Admin, RoleEnum.Agent],
+      user
+    );
     if (sitesWithRoles.length === 0) {
       throw new UnauthorizedException(
         'You do not have priviledged access to any sites.'
@@ -449,11 +440,10 @@ export class TicketResolver {
         (s) => Status[s]
       );
     }
-    let statusHistoryByDate = await this.redisCacheService.get(
-      `statusCountHistory-${statuses.join(',')}-${fromDate.format(
-        'DD-MMMM-YYYY'
-      )}-${toDate.format('DD-MMMM-YYYY')}`
-    );
+    const key = `statusCountHistory-${statuses.join(',')}-${siteIds.join(
+      ','
+    )}-${fromDate.format('DD-MMMM-YYYY')}-${toDate.format('DD-MMMM-YYYY')}`;
+    let statusHistoryByDate = await this.redisCacheService.get(key);
     if (!statusHistoryByDate) {
       statusHistoryByDate = [];
       const statusHistory = await this.prisma.ticketStatusHistory.findMany({
@@ -479,39 +469,43 @@ export class TicketResolver {
           statusCounts,
         });
       }
-      await this.redisCacheService.setForDay(
-        `statusCountHistory-${statuses.join(',')}-${fromDate.format(
-          'DD-MMMM-YYYY'
-        )}-${toDate.format('DD-MMMM-YYYY')}`,
-        statusHistoryByDate
-      );
+      await this.redisCacheService.setForDay(key, statusHistoryByDate);
     }
     return statusHistoryByDate;
   }
 
   @Query(() => [AgentQueue])
-  async agentQueue(@UserEntity() user: User): Promise<AgentQueue[]> {
-    let agentQueue = await this.redisCacheService.get(`agentQueue`);
+  async agentQueue(
+    @UserEntity() user: User,
+    @Args('siteId', { nullable: true }) siteId?: number
+  ): Promise<AgentQueue[]> {
+    const sitesWithRoles = await this.siteService.sitesWithRoles(
+      user.id,
+      [RoleEnum.Admin, RoleEnum.Agent],
+      user
+    );
+    if (sitesWithRoles.length === 0) {
+      throw new UnauthorizedException(
+        'You do not have priviledged access to any sites.'
+      );
+    }
+    let siteIds = sitesWithRoles;
+    if (siteId && sitesWithRoles.includes(siteId)) {
+      siteIds = [siteId];
+    }
+    const key = `agentQueue-${siteIds.join(',')}`;
+    let agentQueue = await this.redisCacheService.get(key);
     if (!agentQueue) {
       agentQueue = [];
-      const sitesWithRoles = await this.siteService.sitesWithRoles(user.id, [
-        RoleEnum.Admin,
-        RoleEnum.Agent,
-      ]);
-      if (sitesWithRoles.length === 0) {
-        throw new UnauthorizedException(
-          'You do not have priviledged access to any sites.'
-        );
-      }
       const activeTickets = await this.prisma.ticket.findMany({
         where: {
           status: { in: ['Pending', 'Open', 'Reopened'] },
-          siteId: { in: sitesWithRoles },
+          siteId: { in: siteIds },
         },
-        include: { ticketAssignments: true },
+        include: { ticketAssignments: true, site: true },
       });
       const allAgents = await this.prisma.user.findMany({
-        where: { roles: { some: { role: 'Agent' } } },
+        where: { roles: { some: { role: 'Agent', siteId: { in: siteIds } } } },
       });
       allAgents.forEach((agent) => {
         const tickets = activeTickets.filter((ticket) => {
@@ -525,7 +519,7 @@ export class TicketResolver {
           tickets,
         });
       });
-      await this.redisCacheService.setFor10Sec(`agentQueue`, agentQueue);
+      await this.redisCacheService.setFor10Sec(key, agentQueue);
     }
     return agentQueue;
   }
