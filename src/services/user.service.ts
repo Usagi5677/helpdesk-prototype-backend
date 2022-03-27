@@ -367,7 +367,8 @@ export class UserService {
       console.log(e);
     }
     await this.redisCacheService.del(`user-uuid-${userId}`);
-    await this.redisCacheService.del(`roles-${user.id}`);
+    await this.redisCacheService.delPattern(`roles-${user.id}-*`);
+    await this.redisCacheService.del(`userSites-${userId}`);
   }
 
   async createIfNotExists(userId: string): Promise<[User, Profile]> {
