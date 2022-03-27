@@ -182,7 +182,7 @@ export class TicketService {
 
       const ticketUsers = await this.getTicketUserIds(id, user.id);
       for (let index = 0; index < ticketUsers.length; index++) {
-        await this.notificationService.create({
+        await this.notificationService.createInBackground({
           userId: ticketUsers[index],
           body: `${user.fullName} (${user.rcno}) set priority to ${priority} on ticket ${id}: ${ticket.title}`,
           link: `/ticket/${id}`,
@@ -206,11 +206,6 @@ export class TicketService {
 
       const ticketUsers = await this.getTicketUserIds(id, user.id);
       for (let index = 0; index < ticketUsers.length; index++) {
-        // await this.notificationService.create({
-        //   userId: ticketUsers[index],
-        //   body: `${user.fullName} (${user.rcno}) set status to ${status} on ticket ${id}: ${ticket.title}`,
-        //   link: `/ticket/${id}`,
-        // });
         const findUser = await this.prisma.user.findFirst({
           where: {
             id: ticketUsers[index],
@@ -270,7 +265,7 @@ export class TicketService {
 
       const ticketUsers = await this.getTicketUserIds(id, user.id);
       for (let index = 0; index < ticketUsers.length; index++) {
-        await this.notificationService.create({
+        await this.notificationService.createInBackground({
           userId: ticketUsers[index],
           body: `${user.fullName} (${user.rcno}) gave rating of ${rating}/5 on ticket (${id}): ${ticket.title}`,
           link: `/ticket/${id}`,
@@ -416,11 +411,11 @@ export class TicketService {
           isOwner: ownerExists ? false : index === 0 ? true : false,
         })),
       });
-      const ticketUsers = await this.getTicketUserIds(ticketId, user.id);
-      const newTicketUsers = ticketUsers.filter((id) => {
-        return id != agentIds[agentIds.length - 1];
-      });
-      const getTicketTitle = await this.prisma.ticket.findFirst({
+      const ticketUserIds = await this.getTicketUserIds(ticketId, user.id);
+      const ticketUsersExceptNewAssignments = ticketUserIds.filter(
+        (id) => !agentIds.includes(id)
+      );
+      const ticket = await this.prisma.ticket.findFirst({
         where: {
           id: ticketId,
         },
@@ -428,23 +423,58 @@ export class TicketService {
           title: true,
         },
       });
-      const getUser = await this.prisma.user.findFirst({
+      const newAssignments = await this.prisma.user.findMany({
         where: {
-          id: agentIds[agentIds.length - 1],
+          id: { in: agentIds },
         },
         select: {
+          id: true,
           fullName: true,
           rcno: true,
+          email: true,
         },
       });
-      for (let index = 0; index < newTicketUsers.length; index++) {
-        await this.notificationService.create({
-          userId: newTicketUsers[index],
-          body: `${user.fullName} (${user.rcno}) assigned ${getUser.fullName} (${getUser.rcno}) to ticket ${ticketId}: ${getTicketTitle.title}`,
+      // Text format new assignments into a readable list with commas and 'and'
+      // at the end.
+      const newAssignmentsFormatted = newAssignments
+        .map((a) => `${a.fullName} (${a.rcno})`)
+        .join(', ')
+        .replace(/, ([^,]*)$/, ' and $1');
+      // Notification to ticket followers except new assignments
+      for (const id of ticketUsersExceptNewAssignments) {
+        await this.notificationService.createInBackground({
+          userId: id,
+          body: `${user.fullName} (${user.rcno}) assigned ${newAssignmentsFormatted} to ticket ${ticketId}: ${ticket.title}`,
           link: `/ticket/${ticketId}`,
         });
       }
-      const commentBody = `Assigned ${getUser.fullName} (${getUser.rcno}) to ticket.`;
+      // Notification to new assignments
+      const newAssignmentsWithoutCurrentUser = newAssignments.filter(
+        (na) => na.id !== user.id
+      );
+      const emailBody = `You have been assigned to ticket ${ticketId}: ${ticket.title}`;
+      for (const newAssignment of newAssignmentsWithoutCurrentUser) {
+        await this.notificationService.createInBackground(
+          {
+            userId: newAssignment.id,
+            body: emailBody,
+            link: `/ticket/${ticketId}`,
+          },
+          {
+            to: [newAssignment.email],
+            subject: `Assigned to ticket`,
+            html: emailTemplate({
+              text: emailBody,
+              extraInfo: `By: <strong>${user.fullName} (${user.rcno})</strong>`,
+              callToAction: {
+                link: `${this.configService.get('APP_URL')}/ticket/${ticketId}`,
+                title: 'View Ticket',
+              },
+            }),
+          }
+        );
+      }
+      const commentBody = `Assigned ${newAssignmentsFormatted} to ticket.`;
       await this.createComment(user, ticketId, commentBody, 'Action');
     } catch (e) {
       if (
@@ -624,7 +654,7 @@ export class TicketService {
           user.id
         );
         for (let index = 0; index < ticketUsers.length; index++) {
-          await this.notificationService.create({
+          await this.notificationService.createInBackground({
             userId: ticketUsers[index],
             body: `${user.fullName} (${user.rcno}) completed checklist item:${checkListItem.description} on ticket ${id}: ${checkListItem.ticket.title}`,
             link: `/ticket/${id}`,
@@ -699,7 +729,7 @@ export class TicketService {
       if (mode === 'Public' || mode === 'Private') {
         const ticketUsers = await this.getTicketUserIds(ticketId, user.id);
         for (let index = 0; index < ticketUsers.length; index++) {
-          await this.notificationService.create({
+          await this.notificationService.createInBackground({
             userId: ticketUsers[index],
             body: `${user.fullName} (${user.rcno}) commented on ticket ${ticketId}: ${comment.ticket.title}`,
             link: `/ticket/${ticketId}`,
@@ -779,8 +809,6 @@ export class TicketService {
     } else if (siteId) {
       where.AND.push({ siteId });
     }
-    console.log(where.AND);
-    console.log(where.AND[0]);
     if (createdById) {
       where.AND.push({ createdById });
     }
