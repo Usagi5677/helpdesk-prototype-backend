@@ -78,7 +78,7 @@ type KnowledgebasePageInfo {
 type Mutation {
   addAppUser(roles: [Role!]!, siteId: Int!, userId: String!): String!
   addChecklistItem(description: String!, ticketId: Int!): String!
-  addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
+  addComment(body: String!, mode: String, ticketId: Int!): String!
   addFollower(newFollowerUserId: String!, ticketId: Int!): String!
   addTicketCategory(categoryId: Int!, ticketId: Int!): String!
   addToUserGroup(userGroupId: Int!, userId: String!): String!
@@ -380,7 +380,7 @@ enum Status {
 
 type Subscription {
   commentCreated(ticketId: Int!): TicketComment!
-  notificationCreated: Notification!
+  notificationCreated(userId: Int!): Notification!
 }
 
 type Ticket {

@@ -52,14 +52,14 @@ export class NotificationResolver {
   }
 
   @Subscription(() => Notification, {
-    filter: () => {
-      return true;
+    filter: (payload, variables) => {
+      return payload.notificationCreated.userId === variables.userId;
     },
     async resolve(this: any, payload: { notificationCreated: Notification }) {
       return payload.notificationCreated;
     },
   })
-  async notificationCreated() {
+  async notificationCreated(@Args('userId') userId: number) {
     return this.pubSub.asyncIterator('notificationCreated');
   }
 }

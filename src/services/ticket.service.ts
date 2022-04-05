@@ -695,15 +695,9 @@ export class TicketService {
   }
 
   //** Make comment as on a ticket. This function is called directly from a user. */
-  async addComment(
-    user: User,
-    ticketId: number,
-    body: string,
-    isPublic: boolean
-  ) {
+  async addComment(user: User, ticketId: number, body: string, mode: string) {
     const [isAdminOrAgent] = await this.checkTicketAccess(user.id, ticketId);
-    let mode = 'Public';
-    if (isAdminOrAgent && isPublic === false) mode = 'Private';
+    if (!mode || !isAdminOrAgent) mode = 'Public';
     await this.createComment(user, ticketId, body, mode);
   }
 
@@ -726,7 +720,7 @@ export class TicketService {
       });
       await this.pubSub.publish('commentCreated', { commentCreated: comment });
 
-      if (mode === 'Public' || mode === 'Private') {
+      if (['Public', 'Private', 'Suggestion', 'Resolution'].includes(mode)) {
         const ticketUsers = await this.getTicketUserIds(ticketId, user.id);
         for (let index = 0; index < ticketUsers.length; index++) {
           await this.notificationService.createInBackground({

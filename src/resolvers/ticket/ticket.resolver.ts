@@ -231,7 +231,7 @@ export class TicketResolver {
     @UserEntity() user: User,
     @Args('ticketId') ticketId: number,
     @Args('body') body: string,
-    @Args('isPublic', { nullable: true }) mode: boolean
+    @Args('mode', { nullable: true }) mode: string
   ): Promise<string> {
     await this.ticketService.addComment(user, ticketId, body, mode);
     return `Comment added to ticket.`;
