@@ -1,19 +1,25 @@
 import { UserResolver } from './user.resolver';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { UserService } from '../../services/user.service';
 import { RedisCacheModule } from 'src/redisCache.module';
 import { UserGroupResolver } from './user-group.resolver';
 import { SearchResolver } from './search.resolver';
-import { ProfileService } from 'src/services/profile.service';
+import { APSService } from 'src/services/aps.service';
+import { APSModule } from '../profile/profile.module';
+import { SiteModule } from '../site/site.module';
 
 @Module({
-  imports: [RedisCacheModule],
+  imports: [
+    forwardRef(() => RedisCacheModule),
+    forwardRef(() => APSModule),
+    SiteModule,
+  ],
   providers: [
     UserResolver,
     UserGroupResolver,
     SearchResolver,
     UserService,
-    ProfileService,
+    APSService,
   ],
   exports: [UserService],
 })

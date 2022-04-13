@@ -7,4 +7,6 @@ export class Notification extends BaseModel {
   user: User;
   body: string;
   readAt?: Date;
+  link?: string;
+  userId: number;
 }

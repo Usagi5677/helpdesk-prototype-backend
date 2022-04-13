@@ -12,16 +12,32 @@ generator dbml {
   provider = "prisma-dbml-generator"
 }
 
+model Site {
+  id              Int                   @id @default(autoincrement())
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  name            String
+  code            String                @unique
+  mode            String                @default("Public")
+  isEnabled       Boolean               @default(true)
+  userRoles       UserRole[]
+  userGroups      UserGroup[]
+  tickets         Ticket[]
+  categories      Category[]
+  statusHistories TicketStatusHistory[]
+  informations    Information[]
+}
+
 model User {
-  id                   Int                  @id @default(autoincrement())
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  userId               String               @unique
+  id                   Int                @id @default(autoincrement())
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  userId               String             @unique
   rcno                 Int
   fullName             String
   email                String
   notifications        Notification[]
-  knowledgeBaseEntries KnowledgeBaseEntry[]
+  informations         Information[]
   roles                UserRole[]
   userGroupUsers       UserGroupUser[]
   ticketsCreated       Ticket[]
@@ -30,6 +46,7 @@ model User {
   checklistCompletions ChecklistItem[]
   ticketComments       TicketComment[]
   ticketAttachments    TicketAttachment[]
+  isSuperAdmin         Boolean            @default(false)
 }
 
 model Notification {
@@ -38,30 +55,27 @@ model Notification {
   userId    Int
   user      User      @relation(fields: [userId], references: [id])
   body      String?
+  link      String?
   readAt    DateTime?
 }
 
-model KnowledgeBase {
-  id      Int                  @id @default(autoincrement())
-  mode    String
-  name    String
-  entries KnowledgeBaseEntry[]
-}
-
-model KnowledgeBaseEntry {
-  id              Int           @id @default(autoincrement())
-  createdAt       DateTime      @default(now())
-  userId          Int
-  user            User          @relation(fields: [userId], references: [id])
-  knowledgeBaseId Int
-  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id])
-  body            String
-  current         Boolean
+model Information {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById Int
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  mode        String
+  title       String
+  body        String
+  siteId      Int      @default(1)
+  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
   Agent
   Admin
+  User
 }
 
 model UserRole {
@@ -69,8 +83,12 @@ model UserRole {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role
+  siteId    Int      @default(1)
+  site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role, siteId])
 }
 
 model UserGroup {
@@ -81,6 +99,8 @@ model UserGroup {
   mode           String          @default("Private")
   createdById    Int
   userGroupUsers UserGroupUser[]
+  siteId         Int             @default(1)
+  site           Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
 }
 
 model UserGroupUser {
@@ -96,23 +116,26 @@ model UserGroupUser {
 }
 
 model Ticket {
-  id             Int                @id @default(autoincrement())
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  createdById    Int
-  createdBy      User               @relation(fields: [createdById], references: [id])
-  status         TicketStatus       @default(Pending)
-  title          String
-  body           String?
-  rating         Int?
-  feedback       String?
-  priority       Priority?
-  categories     TicketCategory[]
-  assignments    TicketAssignment[]
-  checklistItems ChecklistItem[]
-  followings     TicketFollowing[]
-  comments       TicketComment[]
-  attachments    TicketAttachment[]
+  id                Int                @id @default(autoincrement())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  createdById       Int
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  siteId            Int                @default(1)
+  site              Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  status            TicketStatus       @default(Pending)
+  statusChangedAt   DateTime?
+  title             String
+  body              String?
+  rating            Int?
+  feedback          String?
+  priority          Priority?
+  ticketCategories  TicketCategory[]
+  ticketAssignments TicketAssignment[]
+  checklistItems    ChecklistItem[]
+  ticketFollowings  TicketFollowing[]
+  comments          TicketComment[]
+  attachments       TicketAttachment[]
 }
 
 enum TicketStatus {
@@ -136,6 +159,8 @@ model Category {
   name      String
   active    Boolean          @default(true)
   tickets   TicketCategory[]
+  siteId    Int              @default(1)
+  site      Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
 }
 
 model TicketCategory {
@@ -210,4 +235,15 @@ model TicketAttachment {
   originalName       String?
   sharepointFileName String?
   mode               String   @default("Public")
+}
+
+model TicketStatusHistory {
+  id        Int          @id @default(autoincrement())
+  createdAt DateTime     @default(now())
+  status    TicketStatus
+  count     Int
+  siteId    Int          @default(1)
+  site      Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([createdAt, status, siteId])
 }

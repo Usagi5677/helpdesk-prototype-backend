@@ -1,8 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { UserEntity } from '../../decorators/user.decorator';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
-import { User } from '../../models/user.model';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { UserService } from 'src/services/user.service';
 import { SearchResult } from 'src/models/search-result.model';
@@ -14,9 +12,14 @@ export class SearchResolver {
 
   @Query(() => [SearchResult])
   async searchUsersAndGroups(
-    @UserEntity() user: User,
-    @Args('query') query: string
+    @Args('query') query: string,
+    @Args('siteId') siteId: number,
+    @Args('onlyAgents') onlyAgents: boolean
   ) {
-    return await this.userService.searchUserAndGroups(user, query);
+    return await this.userService.searchUserAndGroups(
+      query,
+      siteId,
+      onlyAgents
+    );
   }
 }

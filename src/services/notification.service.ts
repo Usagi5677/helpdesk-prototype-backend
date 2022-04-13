@@ -5,12 +5,17 @@ import nm, { SendMailOptions, Transporter } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { PrismaService } from '../prisma/prisma.service';
 import { Nodemailer } from '../resolvers/notification/notification.provider';
+import { PubSub } from 'graphql-subscriptions';
+import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
 
 export interface Notification {
   userId: number;
   body: string;
+  link?: string;
 }
 
+export const pubSubTwo = new PubSub();
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
@@ -18,8 +23,9 @@ export class NotificationService {
 
   constructor(
     @Inject(Nodemailer) private nodemailer: typeof nm,
-    @InjectQueue('notification') private notificationQueue: Queue,
-    private readonly prisma: PrismaService
+    @InjectQueue('helpdesk-notification') private notificationQueue: Queue,
+    private readonly prisma: PrismaService,
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
   ) {
     this.transporter = this.nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -36,26 +42,31 @@ export class NotificationService {
   }
 
   async create(notification: Notification, emailOptions?: SendMailOptions) {
-    await this.prisma.notification.create({
+    const notif = await this.prisma.notification.create({
       data: {
         body: notification.body,
         userId: notification.userId,
+        link: notification.link,
       },
     });
+
     if (emailOptions) {
       this.sendEmail(emailOptions);
     }
+    await this.pubSub.publish('notificationCreated', {
+      notificationCreated: notif,
+    });
   }
 
   async sendEmail(options: SendMailOptions) {
-    const to = [...((options.to as any[]) ?? [])];
-
-    if (to.length > 0) {
+    //const to = [...((options.to as any[]) ?? [])];
+    //return;
+    if (options.to.length > 0) {
       await this.transporter.sendMail({
         ...options,
         from: `"Helpdesk" <no-reply@mtcc.com.mv>`,
-        to,
-        subject: options.subject ? `Helpdesk: ${options.subject}` : undefined,
+        //to: options.to,
+        //subject: options.subject ? `Helpdesk: ${options.subject}` : undefined,
       });
     }
   }

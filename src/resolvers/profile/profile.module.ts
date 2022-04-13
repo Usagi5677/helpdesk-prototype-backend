@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { RedisCacheModule } from 'src/redisCache.module';
-import { ProfileService } from 'src/services/profile.service';
+import { APSService } from 'src/services/aps.service';
 
 @Module({
   imports: [RedisCacheModule],
-  providers: [ProfileService],
-  exports: [ProfileService],
+  providers: [APSService],
+  exports: [APSService],
 })
-export class ProfileModule {}
+export class APSModule {}

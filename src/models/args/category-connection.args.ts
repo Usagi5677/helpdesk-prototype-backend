@@ -4,4 +4,5 @@ import ConnectionArgs from '../../common/pagination/connection-args';
 @ArgsType()
 export class CategoryConnectionArgs extends ConnectionArgs {
   name?: string;
+  siteId: number;
 }

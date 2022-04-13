@@ -82,7 +82,7 @@ function checkPagingSanity(args: ConnectionArgs): PagingMeta {
 interface PagingParams {
   offset?: number;
   limit?: number;
-  filter?: Object;
+  filter?: any;
 }
 
 export function getPagingParameters(args: ConnectionArgs): PagingParams {
@@ -98,6 +98,7 @@ export function getPagingParameters(args: ConnectionArgs): PagingParams {
     case 'backward': {
       const { last, before } = meta;
       let limit = last;
+      // eslint-disable-next-line
       let offset = getId(before!) - last;
 
       if (offset < 0) {

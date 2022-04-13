@@ -2,11 +2,17 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AgentQueue {
+  agent: User!
+  tickets: [Ticket!]!
+}
+
 type Category {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
   id: Int!
   name: String!
+  site: Site
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
@@ -25,37 +31,87 @@ type CategoryPageInfo {
   startCursor: String
 }
 
+type ChecklistItem {
+  completedAt: Date
+  completedBy: User
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  description: String!
+  id: Int!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+}
+
 """Date custom scalar type"""
 scalar Date
 
+type Knowledgebase {
+  body: String!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  createdBy: User!
+  id: Int!
+  mode: String!
+  site: Site
+  title: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+}
+
+type KnowledgebaseEdge {
+  cursor: String
+  node: Knowledgebase
+}
+
+type KnowledgebasePageInfo {
+  count: Int!
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
 type Mutation {
+  addAppUser(roles: [Role!]!, siteId: Int!, userId: String!): String!
   addChecklistItem(description: String!, ticketId: Int!): String!
-  addComment(body: String!, isPublic: Boolean, ticketId: Int!): String!
-  addFollower(newFollowerId: Int!, ticketId: Int!): String!
-  addToUserGroup(userGroupId: Int!, userId: Int!): String!
-  assignAgent(agentId: Int!, ticketId: Int!): String!
+  addComment(body: String!, mode: String, ticketId: Int!): String!
+  addFollower(newFollowerUserId: String!, ticketId: Int!): String!
+  addTicketCategory(categoryId: Int!, ticketId: Int!): String!
+  addToUserGroup(userGroupId: Int!, userId: String!): String!
+  addUserRole(role: Role!, siteId: Int!, userId: Int!): String!
+  assignAgents(agentIds: [Int!]!, ticketId: Int!): String!
   changeCategoryName(id: Int!, name: String!): String!
-  changeUserGroupMode(id: Int!, mode: String!): String!
-  changeUserGroupName(id: Int!, name: String!): String!
-  completeChecklistItem(id: Int!): String!
-  createCategory(name: String!): String!
-  createTicket(body: String!, title: String!): String!
-  createUserGroup(mode: String!, name: String!): String!
+  createCategory(name: String!, siteId: Int!): String!
+  createKnowledgebase(body: String!, mode: String!, siteId: Int!, title: String!): String!
+  createSite(code: String!, mode: String!, name: String!): String!
+  createTicket(body: String!, siteId: Int!, title: String!): Int!
+  createUserGroup(mode: String!, name: String!, siteId: Int!): String!
   deleteCategory(id: Int!): String!
   deleteChecklistItem(id: Int!): String!
+  deleteSite(id: Int!): String!
   deleteUserGroup(id: Int!): String!
   editChecklistItem(description: String!, id: Int!): String!
+  editKnowledgebase(body: String!, id: Int!, mode: String!, title: String!): String!
+  editSite(code: String!, id: Int!, mode: String!, name: String!): String!
+  editUserGroup(id: Int!, mode: String!, name: String!): String!
   flushRedis: String!
   giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!
   readAllNotifications: Boolean!
-  readNotification(notificationId: Int!): Boolean!
+  readNotification(notificationId: Int!): String!
   removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
-  removeFromUserGroup(id: Int!): String!
+  removeFromUserGroup(userGroupId: Int!, userId: Int!): String!
+  removeKnowledgebase(knowledgebaseId: Int!): String!
+  removeTicketCategory(categoryId: Int!, ticketId: Int!): String!
+  removeUserRole(role: Role!, siteId: Int!, userId: Int!): String!
   setOwner(agentId: Int!, ticketId: Int!): String!
-  setTicketPriority(id: Int!, priority: String!): String!
-  setTicketStatus(id: Int!, status: String!): String!
+  setTicketPriority(priority: Priority!, ticketId: Int!): String!
+  setTicketStatus(status: Status!, ticketId: Int!): String!
+  toggleChecklistItem(complete: Boolean!, id: Int!): String!
   unassignAgent(agentId: Int!, ticketId: Int!): String!
-  uncompleteChecklistItem(id: Int!): String!
 }
 
 type Notification {
@@ -64,11 +120,13 @@ type Notification {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
   id: Int!
+  link: String
   readAt: Date
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
   user: User!
+  userId: Int!
 }
 
 type PaginatedCategory {
@@ -76,9 +134,26 @@ type PaginatedCategory {
   pageInfo: CategoryPageInfo
 }
 
+type PaginatedKnowledgebase {
+  edges: [KnowledgebaseEdge!]
+  pageInfo: KnowledgebasePageInfo
+}
+
+type PaginatedTickets {
+  edges: [TicketEdge!]
+  pageInfo: TicketPageInfo
+}
+
 type PaginatedUserGroup {
   edges: [UserGroupEdge!]
   pageInfo: UserGroupPageInfo
+}
+
+"""Ticket priorities."""
+enum Priority {
+  High
+  Low
+  Normal
 }
 
 type Profile {
@@ -97,6 +172,33 @@ type Profile {
 }
 
 type Query {
+  agentQueue(siteId: Int): [AgentQueue!]!
+  appUsers(siteId: Int!): [User!]!
+  assignedTickets(
+    """Paginate after opaque cursor"""
+    after: String
+    all: Boolean
+    assignedToId: Int
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryIds: [Int!]
+    createdById: Int
+    createdByUserId: String
+
+    """Paginate first"""
+    first: Int
+    followingId: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    siteId: Int
+    status: Status
+    to: Date
+  ): PaginatedTickets!
   categories(
     """Paginate after opaque cursor"""
     after: String
@@ -110,16 +212,117 @@ type Query {
     """Paginate last"""
     last: Int
     name: String
+    siteId: Int!
   ): PaginatedCategory!
-  me: UserWithRoles!
+  categoriesWithAccess: [Category!]!
+  comments(ticketId: Int!): [TicketComment!]!
+  followingTickets(
+    """Paginate after opaque cursor"""
+    after: String
+    all: Boolean
+    assignedToId: Int
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryIds: [Int!]
+    createdById: Int
+    createdByUserId: String
+
+    """Paginate first"""
+    first: Int
+    followingId: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    siteId: Int
+    status: Status
+    to: Date
+  ): PaginatedTickets!
+  getAllKnowledgebase(
+    """Paginate after opaque cursor"""
+    after: String
+
+    """Paginate before opaque cursor"""
+    before: String
+    createdById: Int
+
+    """Paginate first"""
+    first: Int
+
+    """Paginate last"""
+    last: Int
+    search: String
+    siteId: Int
+  ): PaginatedKnowledgebase!
+  hasTicketAccess(ticketId: Int!): Boolean!
+  me: UserWithRolesAndSites!
+  myTickets(
+    """Paginate after opaque cursor"""
+    after: String
+    all: Boolean
+    assignedToId: Int
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryIds: [Int!]
+    createdById: Int
+    createdByUserId: String
+
+    """Paginate first"""
+    first: Int
+    followingId: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    siteId: Int
+    status: Status
+    to: Date
+  ): PaginatedTickets!
   notifications: [Notification!]!
   profile: Profile!
   redisGet(key: String!): String
   redisKeys: [String!]!
-  searchCategory(name: String!): [Category!]!
+  searchAPSUsers(query: String!): [User!]!
   searchUser(query: String!): [User!]!
-  searchUsersAndGroups(query: String!): [SearchResult!]!
+  searchUsersAndGroups(onlyAgents: Boolean!, query: String!, siteId: Int!): [SearchResult!]!
+  singleKnowledgebase(knowledgebaseId: Int!): Knowledgebase!
+  sites: [Site!]!
+  ticket(ticketId: Int!): Ticket!
+  ticketAttachment(id: Int!): TicketAttachment!
   ticketAttachments(ticketId: Int!): [TicketAttachment!]!
+  ticketStatusCount(siteId: Int): [TicketStatusCount!]!
+  ticketStatusCountHistory(from: Date!, siteId: Int, statuses: [Status!], to: Date!): [TicketStatusCountHistory!]!
+  tickets(
+    """Paginate after opaque cursor"""
+    after: String
+    all: Boolean
+    assignedToId: Int
+
+    """Paginate before opaque cursor"""
+    before: String
+    categoryIds: [Int!]
+    createdById: Int
+    createdByUserId: String
+
+    """Paginate first"""
+    first: Int
+    followingId: Int
+    from: Date
+
+    """Paginate last"""
+    last: Int
+    priority: Priority
+    search: String
+    siteId: Int
+    status: Status
+    to: Date
+  ): PaginatedTickets!
   userGroup(id: Int!): UserGroup!
   userGroups(
     """Paginate after opaque cursor"""
@@ -134,7 +337,15 @@ type Query {
     """Paginate last"""
     last: Int
     name: String
+    siteId: Int!
   ): PaginatedUserGroup!
+}
+
+"""All user roles."""
+enum Role {
+  Admin
+  Agent
+  User
 }
 
 type SearchResult {
@@ -142,6 +353,59 @@ type SearchResult {
   type: String!
   user: User
   userGroup: UserGroup
+}
+
+type Site {
+  code: String!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  id: Int!
+  isEnabled: Boolean!
+  mode: String!
+  name: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+}
+
+"""Ticket statuses."""
+enum Status {
+  Closed
+  Open
+  Pending
+  Reopened
+  Solved
+}
+
+type Subscription {
+  commentCreated(ticketId: Int!): TicketComment!
+  notificationCreated(userId: Int!): Notification!
+}
+
+type Ticket {
+  agents: [User!]!
+  body: String
+  categories: [Category!]!
+  checklistItems: [ChecklistItem!]!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  createdBy: User!
+  feedback: String
+  followers: [User!]!
+  id: Int!
+  ownerId: Int
+  priority: Priority
+  rating: Int
+  site: Site!
+  started: Boolean!
+  status: Status!
+  statusChangedAt: Date
+  title: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
 }
 
 type TicketAttachment {
@@ -156,7 +420,44 @@ type TicketAttachment {
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
-  user: User!
+  user: User
+}
+
+type TicketComment {
+  body: String!
+
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  id: Int!
+  mode: String!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+  user: User
+}
+
+type TicketEdge {
+  cursor: String
+  node: Ticket
+}
+
+type TicketPageInfo {
+  count: Int!
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+type TicketStatusCount {
+  count: Int!
+  date: Date
+  status: Status!
+}
+
+type TicketStatusCountHistory {
+  date: Date!
+  statusCounts: [TicketStatusCount!]!
 }
 
 type User {
@@ -165,7 +466,9 @@ type User {
   email: String!
   fullName: String!
   id: Int!
+  isSuperAdmin: Boolean!
   rcno: Int!
+  roles: [UserRole!]
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
@@ -198,11 +501,18 @@ type UserGroupPageInfo {
   startCursor: String
 }
 
-type UserWithRoles {
+type UserRole {
+  role: Role!
+  site: Site!
+}
+
+type UserWithRolesAndSites {
   email: String!
   fullName: String!
   id: Int!
+  isSuperAdmin: Boolean!
   rcno: Int!
-  roles: [String!]!
+  roles: [UserRole!]!
+  sites: [Site!]!
   userId: String!
 }

@@ -5,13 +5,15 @@ import { NotificationService } from '../../services/notification.service';
 import { NotificationProvider } from './notification.provider';
 import { BullModule } from '@nestjs/bull';
 import { NotificationConsumer } from './notification.consumer';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
     PrismaModule,
     BullModule.registerQueue({
-      name: 'notification',
+      name: 'helpdesk-notification',
     }),
+    UserModule,
   ],
   providers: [
     NotificationProvider,

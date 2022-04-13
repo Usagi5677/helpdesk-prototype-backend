@@ -8,7 +8,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { ConfigService } from '@nestjs/config';
 import { SecurityConfig } from 'src/configs/config.interface';
 import { PrismaModule } from 'src/prisma/prisma.module';
-import { ProfileModule } from '../profile/profile.module';
+import { APSModule } from '../profile/profile.module';
 import { UserModule } from '../user/user.module';
 import { RedisCacheModule } from 'src/redisCache.module';
 
@@ -28,11 +28,11 @@ import { RedisCacheModule } from 'src/redisCache.module';
       inject: [ConfigService],
     }),
     PrismaModule,
-    ProfileModule,
+    APSModule,
     UserModule,
     RedisCacheModule,
   ],
   providers: [AuthService, JwtStrategy, GqlAuthGuard, PasswordService],
-  exports: [GqlAuthGuard],
+  exports: [GqlAuthGuard, AuthService],
 })
 export class AuthModule {}

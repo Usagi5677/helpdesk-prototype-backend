@@ -9,7 +9,7 @@ import { User } from '@prisma/client';
 import { PrismaService } from './../prisma/prisma.service';
 import { SecurityConfig } from '../configs/config.interface';
 import { Token } from '../models/token.model';
-import { ProfileService } from './profile.service';
+import { APSService } from './aps.service';
 import { UserService } from './user.service';
 import { RedisCacheService } from 'src/redisCache.service';
 
@@ -19,7 +19,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
-    private readonly profileService: ProfileService,
+    private readonly apsService: APSService,
     private readonly userService: UserService,
     private readonly redisCacheService: RedisCacheService
   ) {}
@@ -32,7 +32,7 @@ export class AuthService {
       user = await this.prisma.user.findUnique({ where: { userId: uuid } });
       if (!user) {
         // If user not found in helpdesk system database, call APS
-        const profile = await this.profileService.getProfile(uuid);
+        const profile = await this.apsService.getProfile(uuid);
         // Create new user based on APS response
         user = await this.userService.createUser(
           profile.rcno,

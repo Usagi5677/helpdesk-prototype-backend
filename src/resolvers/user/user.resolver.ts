@@ -1,27 +1,17 @@
-import { ExecutionContext, UseGuards } from '@nestjs/common';
-import {
-  Args,
-  GqlExecutionContext,
-  Mutation,
-  Query,
-  Resolver,
-} from '@nestjs/graphql';
+import { InternalServerErrorException, UseGuards } from '@nestjs/common';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UserEntity } from '../../decorators/user.decorator';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
 import { User } from '../../models/user.model';
 import { PrismaService } from 'nestjs-prisma';
-import { UsersConnectionArgs } from '../../models/args/user-connection.args';
-import { PaginatedUsers } from '../../models/pagination/user-connection.model';
-import {
-  connectionFromArraySlice,
-  getPagingParameters,
-} from '../../common/pagination/connection-args';
-import { Roles } from 'src/decorators/roles.decorator';
 import { RolesGuard } from 'src/guards/roles.guard';
 import { UserService } from 'src/services/user.service';
 import { Profile } from 'src/models/profile.model';
-import { ProfileService } from 'src/services/profile.service';
-import { UserWithRoles } from 'src/models/user-with-roles.model';
+import { APSService } from 'src/services/aps.service';
+import { UserWithRolesAndSites } from 'src/models/user-with-roles.model';
+import { RedisCacheService } from 'src/redisCache.service';
+import { RoleEnum } from 'src/common/enums/roles';
+import { SiteService } from 'src/services/site.service';
 
 @Resolver(() => User)
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -29,72 +19,80 @@ export class UserResolver {
   constructor(
     private prisma: PrismaService,
     private userService: UserService,
-    private profileService: ProfileService
+    private apsService: APSService,
+    private redisCacheService: RedisCacheService,
+    private siteService: SiteService
   ) {}
 
-  @Query(() => UserWithRoles)
-  async me(@UserEntity() user: User): Promise<UserWithRoles> {
-    const userWithRoles = new UserWithRoles();
+  @Query(() => UserWithRolesAndSites)
+  async me(@UserEntity() user: User): Promise<UserWithRolesAndSites> {
+    const userWithRoles = new UserWithRolesAndSites();
     Object.assign(userWithRoles, user);
-    userWithRoles.roles = await this.userService.getUserRolesList(user.id);
+    userWithRoles.roles = await this.userService.getUserRoles(user.id);
+    userWithRoles.sites = await this.siteService.getUserSites(user.id, user);
     return userWithRoles;
   }
 
   @Query(() => Profile)
   async profile(@UserEntity() user: User): Promise<Profile> {
-    return this.profileService.getProfile(user.userId);
+    return this.apsService.getProfile(user.userId);
   }
 
-  // @Query(() => PaginatedUsers)
-  // async users(@Args() args: UsersConnectionArgs): Promise<PaginatedUsers> {
-  //   const { limit, offset } = getPagingParameters(args);
+  /** Search APS users. */
+  @Query(() => [User])
+  async searchAPSUsers(@Args('query') query: string): Promise<User[]> {
+    return await this.apsService.searchAPS(query);
+  }
 
-  //   const realOffset = offset || 0;
-  //   const realLimit = Math.min(50, limit || 50);
-  //   const realLimitPlusOne = realLimit + 1;
+  /** Add app user with roles. If user does not exist in db, fetches from APS. */
+  @Mutation(() => String)
+  async addAppUser(
+    @UserEntity() user: User,
+    @Args('userId') targetUserId: string,
+    @Args('roles', { type: () => [RoleEnum] }) roles: RoleEnum[],
+    @Args('siteId') siteId: number
+  ): Promise<string> {
+    await this.userService.checkAdmin(user.id, siteId);
+    await this.userService.addAppUser(targetUserId, roles, siteId);
+    return 'App user added.';
+  }
 
-  //   const where: any = { isDeleted: false, rcno: { gt: 0 } };
+  /** Remove role from user. */
+  @Mutation(() => String)
+  async removeUserRole(
+    @UserEntity() user: User,
+    @Args('userId') targetUserId: number,
+    @Args('role', { type: () => RoleEnum }) role: RoleEnum,
+    @Args('siteId') siteId: number
+  ): Promise<string> {
+    await this.userService.checkAdmin(user.id, siteId);
+    await this.prisma.userRole.deleteMany({
+      where: { userId: targetUserId, role, siteId },
+    });
+    await this.redisCacheService.delPattern(`roles-${targetUserId}-*`);
+    return 'User role removed.';
+  }
 
-  //   if (args.searchTerm) {
-  //     let rcno: number | null = null;
-  //     try {
-  //       rcno = parseInt(args.searchTerm);
-  //     } catch (error) {}
-
-  //     if (rcno) {
-  //       where['rcno'] = rcno;
-  //     } else {
-  //       where['fullName'] = { search: args.searchTerm };
-  //     }
-  //   }
-
-  //   const users = await this.prisma.user.findMany({
-  //     skip: offset,
-  //     take: realLimitPlusOne,
-  //     where,
-  //     orderBy: { createdAt: 'desc' },
-  //   });
-
-  //   const count = await this.prisma.user.count();
-
-  //   const { edges, pageInfo } = connectionFromArraySlice(
-  //     users.slice(0, realLimit),
-  //     args,
-  //     {
-  //       arrayLength: count,
-  //       sliceStart: realOffset,
-  //     }
-  //   );
-
-  //   return {
-  //     edges,
-  //     pageInfo: {
-  //       ...pageInfo,
-  //       hasNextPage: realOffset + realLimit < count,
-  //       hasPreviousPage: realOffset >= realLimit,
-  //     },
-  //   };
-  // }
+  /** Add user role. */
+  @Mutation(() => String)
+  async addUserRole(
+    @UserEntity() user: User,
+    @Args('userId') targetUserId: number,
+    @Args('role', { type: () => RoleEnum }) role: RoleEnum,
+    @Args('siteId') siteId: number
+  ): Promise<string> {
+    await this.userService.checkAdmin(user.id, siteId);
+    try {
+      await this.prisma.userRole.create({
+        data: { userId: targetUserId, role, siteId },
+      });
+      await this.redisCacheService.delPattern(`roles-${targetUserId}-*`);
+      return 'User role removed.';
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException('Unexpected error occured.');
+    }
+  }
 
   @Query(() => [User])
   async searchUser(@Args('query') query: string) {
@@ -115,5 +113,19 @@ export class UserResolver {
         take,
       });
     }
+  }
+
+  @Query(() => [User])
+  async appUsers(
+    @UserEntity() user: User,
+    @Args('siteId') siteId: number
+  ): Promise<User[]> {
+    await this.userService.checkAdmin(user.id, siteId);
+    const users: any = await this.prisma.user.findMany({
+      where: { roles: { some: { role: { in: ['Agent', 'Admin'] }, siteId } } },
+      include: { roles: { where: { siteId }, orderBy: { role: 'asc' } } },
+      orderBy: { rcno: 'asc' },
+    });
+    return users;
   }
 }

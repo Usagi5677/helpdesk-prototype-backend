@@ -2,6 +2,22 @@
 //// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 //// ------------------------------------------------------
 
+Table Site {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  name String [not null]
+  code String [unique, not null]
+  mode String [not null, default: 'Public']
+  isEnabled Boolean [not null, default: true]
+  userRoles UserRole [not null]
+  userGroups UserGroup [not null]
+  tickets Ticket [not null]
+  categories Category [not null]
+  statusHistories TicketStatusHistory [not null]
+  informations Information [not null]
+}
+
 Table User {
   id Int [pk, increment]
   createdAt DateTime [default: `now()`, not null]
@@ -11,7 +27,7 @@ Table User {
   fullName String [not null]
   email String [not null]
   notifications Notification [not null]
-  knowledgeBaseEntries KnowledgeBaseEntry [not null]
+  informations Information [not null]
   roles UserRole [not null]
   userGroupUsers UserGroupUser [not null]
   ticketsCreated Ticket [not null]
@@ -20,6 +36,7 @@ Table User {
   checklistCompletions ChecklistItem [not null]
   ticketComments TicketComment [not null]
   ticketAttachments TicketAttachment [not null]
+  isSuperAdmin Boolean [not null, default: false]
 }
 
 Table Notification {
@@ -28,25 +45,21 @@ Table Notification {
   userId Int [not null]
   user User [not null]
   body String
+  link String
   readAt DateTime
 }
 
-Table KnowledgeBase {
-  id Int [pk, increment]
-  mode String [not null]
-  name String [not null]
-  entries KnowledgeBaseEntry [not null]
-}
-
-Table KnowledgeBaseEntry {
+Table Information {
   id Int [pk, increment]
   createdAt DateTime [default: `now()`, not null]
-  userId Int [not null]
-  user User [not null]
-  knowledgeBaseId Int [not null]
-  knowledgeBase KnowledgeBase [not null]
+  updatedAt DateTime [not null]
+  createdById Int [not null]
+  createdBy User [not null]
+  mode String [not null]
+  title String [not null]
   body String [not null]
-  current Boolean [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 }
 
 Table UserRole {
@@ -56,6 +69,12 @@ Table UserRole {
   userId Int [not null]
   user User [not null]
   role Role [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
+
+  indexes {
+    (userId, role, siteId) [unique]
+  }
 }
 
 Table UserGroup {
@@ -66,6 +85,8 @@ Table UserGroup {
   mode String [not null, default: 'Private']
   createdById Int [not null]
   userGroupUsers UserGroupUser [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 }
 
 Table UserGroupUser {
@@ -88,16 +109,19 @@ Table Ticket {
   updatedAt DateTime [not null]
   createdById Int [not null]
   createdBy User [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
   status TicketStatus [not null, default: 'Pending']
+  statusChangedAt DateTime
   title String [not null]
   body String
   rating Int
   feedback String
   priority Priority
-  categories TicketCategory [not null]
-  assignments TicketAssignment [not null]
+  ticketCategories TicketCategory [not null]
+  ticketAssignments TicketAssignment [not null]
   checklistItems ChecklistItem [not null]
-  followings TicketFollowing [not null]
+  ticketFollowings TicketFollowing [not null]
   comments TicketComment [not null]
   attachments TicketAttachment [not null]
 }
@@ -109,6 +133,8 @@ Table Category {
   name String [not null]
   active Boolean [not null, default: true]
   tickets TicketCategory [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
 }
 
 Table TicketCategory {
@@ -189,9 +215,23 @@ Table TicketAttachment {
   mode String [not null, default: 'Public']
 }
 
+Table TicketStatusHistory {
+  id Int [pk, increment]
+  createdAt DateTime [default: `now()`, not null]
+  status TicketStatus [not null]
+  count Int [not null]
+  siteId Int [not null, default: 1]
+  site Site [not null]
+
+  indexes {
+    (createdAt, status, siteId) [unique]
+  }
+}
+
 Enum Role {
   Agent
   Admin
+  User
 }
 
 Enum TicketStatus {
@@ -210,17 +250,25 @@ Enum Priority {
 
 Ref: Notification.userId > User.id
 
-Ref: KnowledgeBaseEntry.userId > User.id
+Ref: Information.createdById > User.id
 
-Ref: KnowledgeBaseEntry.knowledgeBaseId > KnowledgeBase.id
+Ref: Information.siteId > Site.id
 
 Ref: UserRole.userId > User.id
+
+Ref: UserRole.siteId > Site.id
+
+Ref: UserGroup.siteId > Site.id
 
 Ref: UserGroupUser.userId > User.id
 
 Ref: UserGroupUser.userGroupId > UserGroup.id
 
 Ref: Ticket.createdById > User.id
+
+Ref: Ticket.siteId > Site.id
+
+Ref: Category.siteId > Site.id
 
 Ref: TicketCategory.ticketId > Ticket.id
 
@@ -245,3 +293,5 @@ Ref: TicketComment.ticketId > Ticket.id
 Ref: TicketAttachment.userId > User.id
 
 Ref: TicketAttachment.ticketId > Ticket.id
+
+Ref: TicketStatusHistory.siteId > Site.id

@@ -1,7 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { Role } from '@prisma/client';
 import { UserService } from 'src/services/user.service';
 
 @Injectable()
@@ -12,7 +11,7 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const roles = this.reflector.getAllAndOverride<Role[]>('roles', [
+    const roles = this.reflector.getAllAndOverride<string[]>('roles', [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -20,7 +19,8 @@ export class RolesGuard implements CanActivate {
       return true;
     }
     const user = GqlExecutionContext.create(context).getContext().req.user;
-    const userRoles = await this.userService.getUserRolesList(user.id);
-    return roles.some((r) => userRoles.includes(r));
+    if (roles.includes('SuperAdmin') && user.isSuperAdmin) {
+      return true;
+    }
   }
 }

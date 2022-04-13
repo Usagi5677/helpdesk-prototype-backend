@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { User, Role, UserGroup, Prisma } from '@prisma/client';
 import { RedisCacheService } from 'src/redisCache.service';
@@ -13,11 +14,19 @@ import {
 } from 'src/common/pagination/connection-args';
 import { PaginatedUserGroup } from 'src/models/pagination/user-group-connection.model';
 import { SearchResult } from 'src/models/search-result.model';
+import { APSService } from './aps.service';
+import { RoleEnum } from 'src/common/enums/roles';
+import { UserGroup as UserGroupModel } from 'src/models/user-group.model';
+import { Profile } from 'src/models/profile.model';
+import { UserRole } from 'src/models/user-role.model';
+import { SiteService } from './site.service';
 @Injectable()
 export class UserService {
   constructor(
     private prisma: PrismaService,
-    private readonly redisCacheService: RedisCacheService
+    private readonly redisCacheService: RedisCacheService,
+    private readonly apsService: APSService,
+    private readonly siteService: SiteService
   ) {}
 
   //** Create user. Only to be called by the system, not a user. */
@@ -25,49 +34,105 @@ export class UserService {
     rcno: number,
     userId: string,
     fullName: string,
-    email: string
+    email: string,
+    roles?: RoleEnum[],
+    siteId?: number
   ): Promise<User> {
+    if (!roles) roles = [];
     return await this.prisma.user.create({
-      data: { rcno, userId, fullName, email },
+      data: {
+        rcno,
+        userId,
+        fullName,
+        email,
+        roles: { create: roles.map((role) => ({ role, siteId })) },
+      },
     });
   }
 
   //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */
-  async getUserRolesList(id: number): Promise<Role[]> {
-    let roles = await this.redisCacheService.get(`roles-${id}`);
+  async getUserRoles(id: number): Promise<UserRole[]> {
+    const key = `roles-${id}-`;
+    let roles = await this.redisCacheService.get(key);
     if (!roles) {
-      const userRoles = await this.prisma.userRole.findMany({
+      roles = await this.prisma.userRole.findMany({
         where: { userId: id },
+        include: { site: true },
       });
-      roles = userRoles.map((r) => r.role);
-      await this.redisCacheService.setForMonth(`roles-${id}`, roles);
+      await this.redisCacheService.setForMonth(key, roles);
     }
     return roles;
   }
 
-  async userHasRole(userId: number, roles: Role[]): Promise<boolean> {
-    const userRoles = await this.getUserRolesList(userId);
+  //** Get roles of user. First checks cache. If not in cache, gets from db and adds to cache */
+  async getUserSiteRoles(id: number, siteId: number): Promise<string[]> {
+    const key = `roles-${id}-${siteId}`;
+    let roles = await this.redisCacheService.get(key);
+    if (!roles) {
+      const userRoles = await this.prisma.userRole.findMany({
+        where: { userId: id, siteId },
+      });
+      roles = userRoles.map((r) => r.role);
+      await this.redisCacheService.setForMonth(key, roles);
+    }
+    return roles;
+  }
+
+  async userHasRole(
+    userId: number,
+    roles: Role[],
+    siteId: number
+  ): Promise<boolean> {
+    const userRoles = await this.getUserSiteRoles(userId, siteId);
     if (roles.some((r) => userRoles.includes(r))) return true;
     return false;
   }
 
-  async isAdminOrAgent(userId: number): Promise<boolean> {
-    return await this.userHasRole(userId, ['Admin', 'Agent']);
+  async isAdminOrAgent(userId: number, siteId: number): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({ where: { id: userId } });
+    if (user.isSuperAdmin) return true;
+    return await this.userHasRole(userId, ['Admin', 'Agent'], siteId);
   }
 
-  async isAdmin(userId: number): Promise<boolean> {
-    return await this.userHasRole(userId, ['Admin']);
+  async isAdmin(userId: number, siteId: number): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({ where: { id: userId } });
+    if (user.isSuperAdmin) return true;
+    return await this.userHasRole(userId, ['Admin'], siteId);
   }
 
-  async isAgent(userId: number): Promise<boolean> {
-    return await this.userHasRole(userId, ['Agent']);
+  async isAgent(userId: number, siteId: number): Promise<boolean> {
+    return await this.userHasRole(userId, ['Agent'], siteId);
+  }
+
+  async checkAdminOrAgent(userId: number, siteId: number) {
+    const isAdminOrAgent = await this.isAdminOrAgent(userId, siteId);
+    if (!isAdminOrAgent) {
+      throw new UnauthorizedException('You do not have access to this site.');
+    }
+  }
+  async checkAdmin(userId: number, siteId: number) {
+    const isAdmin = await this.isAdmin(userId, siteId);
+    if (!isAdmin) {
+      throw new UnauthorizedException('You do not have access to this site.');
+    }
+  }
+  async checkAgent(userId: number, siteId: number) {
+    const isAgent = await this.isAgent(userId, siteId);
+    if (!isAgent) {
+      throw new UnauthorizedException('You do not have access to this site.');
+    }
   }
 
   //** Create user group. */
-  async createUserGroup(user: User, name: string, mode: string) {
+  async createUserGroup(
+    user: User,
+    name: string,
+    mode: string,
+    siteId: number
+  ) {
     try {
       await this.prisma.userGroup.create({
-        data: { name, mode, createdById: user.id },
+        data: { name, mode, createdById: user.id, siteId },
       });
     } catch (e) {
       if (
@@ -83,10 +148,13 @@ export class UserService {
   }
 
   //** Change name of user group. */
-  async changeUserGroupName(id: number, name: string) {
+  async editUserGroup(id: number, name: string, mode: string) {
+    if (mode !== 'Private' && mode !== 'Public') {
+      throw new BadRequestException('Invalid mode.');
+    }
     try {
       await this.prisma.userGroup.update({
-        data: { name },
+        data: { name, mode },
         where: { id },
       });
     } catch (e) {
@@ -99,22 +167,6 @@ export class UserService {
         console.log(e);
         throw new InternalServerErrorException('Unexpected error occured.');
       }
-    }
-  }
-
-  //** Change mode of user group. */
-  async changeUserGroupMode(id: number, mode: string) {
-    if (mode !== 'Private' && mode !== 'Public') {
-      throw new BadRequestException('Invalid mode.');
-    }
-    try {
-      await this.prisma.userGroup.update({
-        data: { mode },
-        where: { id },
-      });
-    } catch (e) {
-      console.log(e);
-      throw new InternalServerErrorException('Unexpected error occured.');
     }
   }
 
@@ -131,10 +183,11 @@ export class UserService {
   }
 
   //** Add user to user group. */
-  async addToUserGroup(userId: number, userGroupId: number) {
+  async addToUserGroup(userId: string, userGroupId: number) {
+    const [user] = await this.createIfNotExists(userId);
     try {
       await this.prisma.userGroupUser.create({
-        data: { userId, userGroupId },
+        data: { userId: user.id, userGroupId },
       });
     } catch (e) {
       if (
@@ -149,10 +202,10 @@ export class UserService {
   }
 
   //** Remove user from user group. */
-  async removeFromUserGroup(id: number) {
+  async removeFromUserGroup(userId: number, userGroupId: number) {
     try {
-      await this.prisma.userGroupUser.delete({
-        where: { id },
+      await this.prisma.userGroupUser.deleteMany({
+        where: { userId, userGroupId },
       });
     } catch (e) {
       throw new InternalServerErrorException('Unexpected error occured.');
@@ -165,7 +218,6 @@ export class UserService {
       where: { id },
       include: { userGroupUsers: { include: { user: true } } },
     });
-    console.log(userGroupResp);
     if (!userGroupResp) {
       throw new BadRequestException('User group does not exist.');
     }
@@ -179,28 +231,30 @@ export class UserService {
   ): Promise<PaginatedUserGroup> {
     const { limit, offset } = getPagingParameters(args);
     const limitPlusOne = limit + 1;
-    const { name } = args;
-    let conditionalMode = { mode: 'Public' };
-
-    // Only these roles can see all results
-    const isAdminOrAgent = await this.isAdminOrAgent(user.id);
-    if (isAdminOrAgent) {
-      conditionalMode = null;
-    }
+    const { name, siteId } = args;
+    await this.checkAdminOrAgent(user.id, siteId);
     const where: any = {
       AND: [
         { name: { contains: name ?? '', mode: 'insensitive' } },
-        conditionalMode,
+        { siteId },
       ],
     };
     const userGroups = await this.prisma.userGroup.findMany({
       skip: offset,
       take: limitPlusOne,
       where,
+      include: { userGroupUsers: { include: { user: true } } },
+    });
+    const userGroupsResp: UserGroupModel[] = [];
+    userGroups.forEach((userGroup) => {
+      const userGroupResp = new UserGroupModel();
+      Object.assign(userGroupResp, userGroup);
+      userGroupResp.users = userGroup.userGroupUsers.map((ugu) => ugu.user);
+      userGroupsResp.push(userGroupResp);
     });
     const count = await this.prisma.userGroup.count({ where });
     const { edges, pageInfo } = connectionFromArraySlice(
-      userGroups.slice(0, limit),
+      userGroupsResp.slice(0, limit),
       args,
       {
         arrayLength: count,
@@ -211,6 +265,7 @@ export class UserService {
       edges,
       pageInfo: {
         ...pageInfo,
+        count,
         hasNextPage: offset + limit < count,
         hasPreviousPage: offset >= limit,
       },
@@ -219,71 +274,52 @@ export class UserService {
 
   //** Searches users and user groups */
   async searchUserAndGroups(
-    user: User,
-    query: string
+    query: string,
+    siteId: number,
+    onlyAgents?: boolean
   ): Promise<SearchResult[]> {
-    let take = 10;
     const contains = query.trim();
-    const isRCNO = /^-?\d+$/.test(contains);
-    let searchResults: SearchResult[] = [];
+    const searchResults: SearchResult[] = [];
     let users: User[] = [];
-
-    // If search query is just a number, search user rcno only
-    if (isRCNO) {
-      let findingUser = await this.redisCacheService.get(`rcno-${contains}`);
-      if (!findingUser) {
-        findingUser = await this.prisma.user.findFirst({
-          where: { rcno: parseInt(contains) },
-        });
-        if (findingUser) {
-          await this.redisCacheService.setForMonth(
-            `rcno-${contains}`,
-            findingUser
-          );
-        }
-      }
-      if (findingUser) users.push(findingUser);
+    if (onlyAgents) {
+      users = await this.prisma.user.findMany({
+        where: {
+          fullName: { contains, mode: 'insensitive' },
+          roles: { some: { role: { in: ['Agent'] }, siteId } },
+        },
+      });
+    } else {
+      users = await this.apsService.searchAPS(contains);
     }
 
-    // Otherwise search both users and user groups by name
-    else {
-      const where: any = {
-        AND: [{ name: { contains, mode: 'insensitive' } }],
-      };
-      // Only these roles can see all user groups
-      const isAdminOrAgent = await this.isAdminOrAgent(user.id);
-      if (!isAdminOrAgent) {
-        // Otherwise show only public groups
-        where.AND.push({
-          mode: 'Public',
-        });
-      }
-      const userGroups = await this.prisma.userGroup.findMany({
-        where,
-        take: Math.floor(take / 2),
+    const where: any = {
+      AND: [{ name: { contains, mode: 'insensitive' } }, { siteId }],
+    };
+    if (onlyAgents)
+      where.AND.push({
+        userGroupUsers: {
+          every: { user: { roles: { some: { role: 'Agent', siteId } } } },
+        },
       });
+    const userGroups = await this.prisma.userGroup.findMany({
+      where,
+      take: 5,
+      include: { userGroupUsers: { include: { user: true } } },
+    });
 
-      // Map each user group to search results
-      userGroups.forEach((group) => {
+    // Map each user group to search results
+    userGroups.forEach((group) => {
+      if (group.userGroupUsers.length > 0) {
         const searchResult = new SearchResult();
         searchResult.name = group.name;
         searchResult.type = 'UserGroup';
         searchResult.userGroup = group;
+        searchResult.userGroup.users = group.userGroupUsers.map(
+          (ugu) => ugu.user
+        );
         searchResults.push(searchResult);
-      });
-
-      // If there are less results for user groups than half of the take limit,
-      // remaining amount is added to take limit for user result
-      if (userGroups.length <= Math.floor(take / 2)) {
-        take -= userGroups.length;
-      } else {
-        take = Math.floor(take / 2);
       }
-      users = await this.prisma.user.findMany({
-        where: { fullName: { contains, mode: 'insensitive' } },
-        take: take,
-      });
-    }
+    });
 
     // Map each user to search results
     users.forEach((user) => {
@@ -294,5 +330,63 @@ export class UserService {
       searchResults.push(searchResult);
     });
     return searchResults;
+  }
+
+  async addAppUser(userId: string, roles: RoleEnum[], siteId) {
+    const user = await this.prisma.user.findFirst({
+      where: { userId },
+      include: { roles: true },
+    });
+
+    // If user doesn't exist on the system, fetch from APS, then create user with roles.
+    if (!user) {
+      const profile = await this.apsService.getProfile(userId);
+      if (!profile) {
+        throw new BadRequestException('Invalid user.');
+      }
+      await this.createUser(
+        profile.rcno,
+        profile.userId,
+        profile.fullName,
+        profile.email,
+        roles,
+        siteId
+      );
+      return;
+    }
+
+    try {
+      // If user does exist, remove existing roles and add new roles.
+      await this.prisma.userRole.deleteMany({
+        where: { userId: user.id, siteId },
+      });
+      await this.prisma.userRole.createMany({
+        data: roles.map((role) => ({ userId: user.id, role, siteId })),
+      });
+    } catch (e) {
+      console.log(e);
+    }
+    await this.redisCacheService.del(`user-uuid-${userId}`);
+    await this.redisCacheService.delPattern(`roles-${user.id}-*`);
+    await this.redisCacheService.del(`userSites-${userId}`);
+  }
+
+  async createIfNotExists(userId: string): Promise<[User, Profile]> {
+    let user = await this.prisma.user.findFirst({
+      where: { userId },
+    });
+    const profile = await this.apsService.getProfile(userId);
+    if (!profile) {
+      throw new BadRequestException('Invalid user.');
+    }
+    if (!user) {
+      user = await this.createUser(
+        profile.rcno,
+        profile.userId,
+        profile.fullName,
+        profile.email
+      );
+    }
+    return [user, profile];
   }
 }

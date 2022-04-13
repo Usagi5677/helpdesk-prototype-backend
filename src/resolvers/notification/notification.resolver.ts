@@ -1,16 +1,23 @@
-import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { Notification } from '../../models/notification.model';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserEntity } from '../../decorators/user.decorator';
 import { User } from '../../models/user.model';
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../../guards/gql-auth.guard';
+import { NotificationService } from 'src/services/notification.service';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PUB_SUB } from 'src/resolvers/pubsub/pubsub.module';
 
-@UseGuards(GqlAuthGuard)
 @Resolver(() => Notification)
 export class NotificationResolver {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+    @Inject(PUB_SUB) private readonly pubSub: RedisPubSub
+  ) {}
 
+  @UseGuards(GqlAuthGuard)
   @Query(() => [Notification])
   async notifications(@UserEntity() user: User) {
     return await this.prisma.notification.findMany({
@@ -20,6 +27,7 @@ export class NotificationResolver {
     });
   }
 
+  @UseGuards(GqlAuthGuard)
   @Mutation(() => Boolean)
   async readAllNotifications(@UserEntity() user: User) {
     await this.prisma.$queryRaw`
@@ -29,15 +37,29 @@ export class NotificationResolver {
     return true;
   }
 
-  @Mutation(() => Boolean)
-  async readNotification(
-    @UserEntity() user: User,
-    @Args('notificationId', { type: () => Int }) notificationId: number
-  ) {
-    await this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { readAt: new Date() },
-    });
-    return true;
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => String)
+  async readNotification(@Args('notificationId') notificationId: number) {
+    try {
+      await this.prisma.notification.update({
+        where: { id: notificationId },
+        data: { readAt: new Date() },
+      });
+    } catch (e) {
+      console.log(e);
+    }
+    return `Successfully read notification`;
+  }
+
+  @Subscription(() => Notification, {
+    filter: (payload, variables) => {
+      return payload.notificationCreated.userId === variables.userId;
+    },
+    async resolve(this: any, payload: { notificationCreated: Notification }) {
+      return payload.notificationCreated;
+    },
+  })
+  async notificationCreated(@Args('userId') userId: number) {
+    return this.pubSub.asyncIterator('notificationCreated');
   }
 }

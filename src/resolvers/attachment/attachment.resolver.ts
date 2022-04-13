@@ -1,5 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
+import { PrismaService } from 'nestjs-prisma';
 import { UserEntity } from 'src/decorators/user.decorator';
 import { GqlAuthGuard } from 'src/guards/gql-auth.guard';
 import { RolesGuard } from 'src/guards/roles.guard';
@@ -10,7 +11,15 @@ import { AttachmentService } from 'src/services/attachment.service';
 @Resolver(() => TicketAttachment)
 @UseGuards(GqlAuthGuard, RolesGuard)
 export class AttachmentResolver {
-  constructor(private readonly attachmentService: AttachmentService) {}
+  constructor(
+    private readonly attachmentService: AttachmentService,
+    private prisma: PrismaService
+  ) {}
+
+  @Query(() => TicketAttachment)
+  async ticketAttachment(@Args('id') id: number): Promise<TicketAttachment> {
+    return await this.prisma.ticketAttachment.findFirst({ where: { id } });
+  }
 
   @Query(() => [TicketAttachment])
   async ticketAttachments(

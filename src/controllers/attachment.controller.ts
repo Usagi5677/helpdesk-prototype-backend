@@ -7,7 +7,6 @@ import {
   Post,
   Req,
   Res,
-  UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -40,7 +39,7 @@ export class AttachmentController {
     @Body() { ticketId, description, isPublic }: CreateAttachmentInput
   ) {
     const user = req.user;
-    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+    const [isAdminOrAgent] = await this.ticketService.checkTicketAccess(
       user.id,
       parseInt(ticketId)
     );
@@ -72,6 +71,13 @@ export class AttachmentController {
         await this.attachmentService.uploadFile(attachment, {
           name: sharepointFileName,
         });
+        const body = `${description} attachment:${newAttachment.id}`;
+        await this.ticketService.createComment(
+          user,
+          parseInt(ticketId),
+          body,
+          'Public'
+        );
       } catch (error) {
         if (newAttachment?.id) {
           await this.prisma.ticketAttachment.delete({
@@ -102,9 +108,9 @@ export class AttachmentController {
     );
     const fileData = file.data;
     res.set({
-      'Content-Disposition': `inline; filename=${
+      'Content-Disposition': `inline; filename="${
         attachment.originalName ?? attachment.sharepointFileName
-      }`,
+      }"`,
       'Content-Type': attachment.mimeType ?? null,
     });
     res.end(fileData);

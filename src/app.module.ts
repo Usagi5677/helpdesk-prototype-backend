@@ -1,5 +1,5 @@
 import { GraphQLModule } from '@nestjs/graphql';
-import { Module } from '@nestjs/common';
+import { Module, UnauthorizedException } from '@nestjs/common';
 import { AppController } from './controllers/app.controller';
 import { AppService } from './services/app.service';
 import { AuthModule } from './resolvers/auth/auth.module';
@@ -13,6 +13,11 @@ import { PrismaModule } from 'nestjs-prisma';
 import { TicketModule } from './resolvers/ticket/ticket.module';
 import { AttachmentModule } from './resolvers/attachment/attachment.module';
 import { BullModule } from '@nestjs/bull';
+import { KnowledgebaseModule } from './resolvers/knowledgebase/knowledgebase.module';
+import jwtDecode from 'jwt-decode';
+import { PubsubModule } from './resolvers/pubsub/pubsub.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SiteModule } from './resolvers/site/site.module';
 
 @Module({
   imports: [
@@ -31,6 +36,19 @@ import { BullModule } from '@nestjs/bull';
           debug: graphqlConfig.debug,
           playground: graphqlConfig.playgroundEnabled,
           context: ({ req }) => ({ req }),
+          subscriptions: {
+            'subscriptions-transport-ws': {
+              onConnect: (connectionParams: { authToken: any }) => {
+                const authHeader = connectionParams.authToken;
+                if (!authHeader) throw new UnauthorizedException();
+                const token = authHeader.split('Bearer ')[1];
+                if (!token) throw new UnauthorizedException();
+                const decoded = jwtDecode(token);
+                if (!decoded) throw new UnauthorizedException();
+                return decoded;
+              },
+            },
+          },
         };
       },
       inject: [ConfigService],
@@ -44,10 +62,14 @@ import { BullModule } from '@nestjs/bull';
         port: 6379,
       },
     }),
+    PubsubModule,
     AuthModule,
     UserModule,
     TicketModule,
     AttachmentModule,
+    KnowledgebaseModule,
+    ScheduleModule.forRoot(),
+    SiteModule,
   ],
   controllers: [AppController],
   providers: [AppService, AppResolver, DateScalar],

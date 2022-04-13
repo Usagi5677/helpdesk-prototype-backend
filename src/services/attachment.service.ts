@@ -24,7 +24,8 @@ interface FileOptions {
 export class AttachmentService {
   private readonly logger = new Logger(AttachmentService.name);
   private readonly siteUrl = `https://${process.env.SP_URL}/sites/${process.env.SP_SITE_NAME}`;
-  private readonly serverRelativeUrlToFolder = 'Shared Documents/Test';
+  private readonly serverRelativeUrlToFolder =
+    process.env.SP_ATTACHMENTS_FOLDER;
   private readonly SP_TOKEN_KEY = 'SHAREPOINT_ACCESS_TOKEN';
 
   constructor(
@@ -156,6 +157,7 @@ export class AttachmentService {
       );
       return result;
     } catch (e) {
+      console.log(e);
       this.logger.error('Thrown Error', e.response.data.error);
       throw new InternalServerErrorException(
         'An error occurred uploading file'
@@ -191,7 +193,7 @@ export class AttachmentService {
     user: User,
     ticketId: number
   ): Promise<TicketAttachment[]> {
-    const [isAdminOrAgent, _] = await this.ticketService.checkTicketAccess(
+    const [isAdminOrAgent] = await this.ticketService.checkTicketAccess(
       user.id,
       ticketId
     );
@@ -199,7 +201,6 @@ export class AttachmentService {
       where: { ticketId, mode: isAdminOrAgent ? undefined : 'Public' },
       include: { user: true },
     });
-    console.log(attachments);
     return attachments;
   }
 }
