@@ -56,7 +56,7 @@ export class TicketResolver {
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
     });
-    await this.userService.checkAdminOrAgent(user.id, ticket.id);
+    await this.userService.checkAdminOrAgent(user.id, ticket.siteId);
     await this.ticketService.setTicketPriority(user, ticketId, priority);
     return `Ticket priority set to ${priority}.`;
   }
@@ -68,7 +68,7 @@ export class TicketResolver {
     @Args('status', { type: () => Status }) status: Status
   ): Promise<string> {
     const ticket = await this.prisma.ticket.findFirst({ where: { id: id } });
-    await this.userService.checkAdminOrAgent(user.id, ticket.id);
+    await this.userService.checkAdminOrAgent(user.id, ticket.siteId);
     await this.ticketService.setTicketStatus(user, id, status);
     return `Ticket status set to ${status}.`;
   }
@@ -144,7 +144,7 @@ export class TicketResolver {
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
     });
-    await this.userService.checkAdminOrAgent(user.id, ticket.id);
+    await this.userService.checkAdminOrAgent(user.id, ticket.siteId);
     await this.ticketService.setOwner(user, ticketId, agentId, ticket.siteId);
     return `Successfully set new owner of ticket.`;
   }
@@ -158,7 +158,7 @@ export class TicketResolver {
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
     });
-    await this.userService.checkAdminOrAgent(user.id, ticket.id);
+    await this.userService.checkAdminOrAgent(user.id, ticket.siteId);
     await this.ticketService.unassignAgent(
       user,
       ticketId,
@@ -177,7 +177,7 @@ export class TicketResolver {
     const ticket = await this.prisma.ticket.findFirst({
       where: { id: ticketId },
     });
-    await this.userService.checkAdminOrAgent(user.id, ticket.id);
+    await this.userService.checkAdminOrAgent(user.id, ticket.siteId);
     await this.ticketService.createChecklistItem(user, ticketId, description);
     return `Added checklist item to ticket.`;
   }
@@ -192,7 +192,10 @@ export class TicketResolver {
       where: { id },
       include: { ticket: true },
     });
-    await this.userService.checkAdminOrAgent(user.id, checklistItem.ticket.id);
+    await this.userService.checkAdminOrAgent(
+      user.id,
+      checklistItem.ticket.siteId
+    );
     await this.ticketService.editChecklistItem(user, id, description);
     return `Checklist item updated.`;
   }
@@ -207,7 +210,10 @@ export class TicketResolver {
       where: { id },
       include: { ticket: true },
     });
-    await this.userService.checkAdminOrAgent(user.id, checklistItem.ticket.id);
+    await this.userService.checkAdminOrAgent(
+      user.id,
+      checklistItem.ticket.siteId
+    );
     await this.ticketService.toggleChecklistItem(user, id, complete);
     return `Checklist item updated.`;
   }
@@ -221,7 +227,10 @@ export class TicketResolver {
       where: { id },
       include: { ticket: true },
     });
-    await this.userService.checkAdminOrAgent(user.id, checklistItem.ticket.id);
+    await this.userService.checkAdminOrAgent(
+      user.id,
+      checklistItem.ticket.siteId
+    );
     await this.ticketService.deleteChecklistItem(user, id);
     return `Checklist item deleted.`;
   }

@@ -309,6 +309,7 @@ export class TicketService {
           {
             userId: newFollower.id,
             body,
+            link: `/ticket/${ticketId}`,
           },
           {
             to: [newFollower.email],
@@ -421,6 +422,7 @@ export class TicketService {
         },
         select: {
           title: true,
+          status: true,
         },
       });
       const newAssignments = await this.prisma.user.findMany({
@@ -476,6 +478,9 @@ export class TicketService {
       }
       const commentBody = `Assigned ${newAssignmentsFormatted} to ticket.`;
       await this.createComment(user, ticketId, commentBody, 'Action');
+      if (ticket.status === 'Pending') {
+        await this.setTicketStatus(user, ticketId, Status.Open);
+      }
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
