@@ -309,6 +309,7 @@ export class TicketService {
           {
             userId: newFollower.id,
             body,
+            link: `/ticket/${ticketId}`,
           },
           {
             to: [newFollower.email],
