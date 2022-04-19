@@ -61,6 +61,7 @@ export class APSService {
           }
         })
         .catch((error) => {
+          console.log({ uuid });
           console.log(error);
           throw new InternalServerErrorException();
         });
