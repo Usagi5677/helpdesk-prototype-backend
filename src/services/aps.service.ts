@@ -1,11 +1,16 @@
 import { RedisCacheService } from 'src/redisCache.service';
 import { Profile } from 'src/models/profile.model';
 import axios from 'axios';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { User } from 'src/models/user.model';
 
 @Injectable()
 export class APSService {
+  private readonly logger = new Logger(APSService.name);
   constructor(private readonly redisCacheService: RedisCacheService) {}
 
   /** Get profile from APS and cache for 7 days */
@@ -61,8 +66,11 @@ export class APSService {
           }
         })
         .catch((error) => {
-          console.log({ uuid });
-          console.log(error);
+          this.logger.error({
+            uuid,
+            code: error.response.status,
+            errors: error.response.data.errors,
+          });
           throw new InternalServerErrorException();
         });
       const secondsInWeek = 7 * 24 * 60 * 60;
@@ -117,7 +125,11 @@ export class APSService {
         }
       })
       .catch((error) => {
-        console.log(error.response.data.errors);
+        this.logger.error({
+          searchQuery,
+          code: error.response.status,
+          errors: error.response.data.errors,
+        });
         throw new InternalServerErrorException();
       });
     return users;
