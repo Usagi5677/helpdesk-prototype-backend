@@ -864,7 +864,7 @@ export class TicketService {
         checklistItems: { orderBy: { id: 'asc' } },
         site: true,
       },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     // Mapping from many to many relationship to a more readable gql form
