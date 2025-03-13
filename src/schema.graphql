@@ -415,6 +415,20 @@ type Ticket {
   updatedAt: Date!
 }
 
+type TicketAssignment {
+  """Identifies the date and time when the object was created."""
+  createdAt: Date!
+  id: Int!
+  isOwner: Boolean!
+  ticket: Ticket!
+  ticketId: Int!
+
+  """Identifies the date and time when the object was last updated."""
+  updatedAt: Date!
+  user: User!
+  userId: Int!
+}
+
 type TicketAttachment {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
@@ -448,6 +462,12 @@ type TicketEdge {
   node: Ticket
 }
 
+type TicketFollowing {
+  createdAt: Date!
+  id: Int!
+  updatedAt: Date!
+}
+
 type TicketPageInfo {
   count: Int!
   endCursor: String
@@ -468,6 +488,8 @@ type TicketStatusCountHistory {
 }
 
 type User {
+  checklistCompletions: [ChecklistItem!]
+
   """Identifies the date and time when the object was created."""
   createdAt: Date!
   email: String!
@@ -477,9 +499,15 @@ type User {
   password: String
   rcno: Int!
   roles: [UserRole!]
+  ticketAssignments: [TicketAssignment!]
+  ticketAttachments: [TicketAttachment!]
+  ticketComments: [TicketComment!]
+  ticketFollowings: [TicketFollowing!]
+  ticketsCreated: [Ticket!]
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
+  userGroupUsers: [UserGroup!]
   userId: String!
 }
 
