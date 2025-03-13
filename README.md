@@ -80,7 +80,7 @@ The server will run at http://localhost:4000.
 
 - Requires PostgreSQL running locally or on a cloud provider.
 - Redis is needed for real-time notifications.
-- The frontend is required for full functionality [here](https://github.com/Usagi5677/helpdesk-prototype-frontend).
+- The frontend is required for full functionality (available [here](https://github.com/Usagi5677/helpdesk-prototype-frontend)).
 
 ## 📄 License
 
