@@ -78,9 +78,9 @@ The server will run at http://localhost:4000.
 
 ## 📌 Notes
 
-    Requires PostgreSQL running locally or on a cloud provider.
-    Redis is needed for real-time notifications.
-    The frontend is required for full functionality (available here).
+- Requires PostgreSQL running locally or on a cloud provider.
+- Redis is needed for real-time notifications.
+- The frontend is required for full functionality (available here).
 
 ## 📄 License
 
