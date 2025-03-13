@@ -1,55 +1,53 @@
 name: CI
-# Controls when the action will run
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [main]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it.
       - uses: actions/checkout@v3
-
-      # Update Browserslist database
+      
+      # Add step to check environment
+      - name: Check environment
+        run: |
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+          echo "Ubuntu version: $(lsb_release -a)"
+          echo "OpenSSL version: $(openssl version)"
+      
       - name: Update Browserslist Database
         run: npx browserslist@latest --update-db
-
-      # Set up Node.js environment
+        
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "16" # or whatever version you use
+          node-version: "16"
           cache: "npm"
-
-      # Install dependencies
+      
+      # Add explicit Prisma setup
+      - name: Setup Prisma
+        run: |
+          npm install prisma@latest @prisma/client@latest --save-dev
+          npx prisma -v
+          
       - name: Install dependencies
         run: npm ci
-
-      # Run linting
+      
+      # Run prisma generate separately with verbose logging
+      - name: Generate Prisma client
+        run: npx prisma generate --verbose
+        
       - name: Run ESLint
         run: npm run lint
-
-      # Run tests if you have them
+        
       - name: Run tests
-        run: npm test || true # The "|| true" makes it continue even if tests fail
-
-      # Build the project with CI set to false to treat warnings as non-fatal
+        run: npm test || true
+        
       - name: Build
         run: CI=false npm run build
-
-      # You'll need to replace this with your actual deployment steps
-      # This is a placeholder for your deployment logic
+        
       - name: Deploy
         run: |
           echo "Add your deployment commands here"
-          # For example:
-          # npm run deploy
