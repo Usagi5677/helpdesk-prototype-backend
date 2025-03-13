@@ -1,88 +1,89 @@
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from 'nestjs-prisma';
 import { User } from '@prisma/client';
-import { PrismaService } from './../prisma/prisma.service';
-import { SecurityConfig } from '../configs/config.interface';
-import { Token } from '../models/token.model';
-import { APSService } from './aps.service';
-import { UserService } from './user.service';
-import { RedisCacheService } from 'src/redisCache.service';
+import { ConfigService } from '@nestjs/config';
+import { SecurityConfig } from 'src/configs/config.interface';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
-    private readonly apsService: APSService,
-    private readonly userService: UserService,
-    private readonly redisCacheService: RedisCacheService
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService
   ) {}
 
-  async validateUser(uuid: string): Promise<User> {
-    // First check cache
-    let user = await this.redisCacheService.get(`user-uuid-${uuid}`);
+  async login(email: string, password: string) {
+    // First, find the user by email
+    const user = await this.prisma.user.findFirst({ where: { email } });
+
     if (!user) {
-      // If not in cache, call database
-      user = await this.prisma.user.findUnique({ where: { userId: uuid } });
-      if (!user) {
-        // If user not found in helpdesk system database, call APS
-        const profile = await this.apsService.getProfile(uuid);
-        // Create new user based on APS response
-        user = await this.userService.createUser(
-          profile.rcno,
-          profile.userId,
-          profile.fullName,
-          profile.email
-        );
-        if (!user) {
-          throw new BadRequestException('Invalid user.');
-        }
-      }
-      await this.redisCacheService.setForMonth(`user-uuid-${uuid}`, user);
+      throw new UnauthorizedException('Invalid email or password');
     }
-    return user;
+
+    // Check if the user has a password (first-time login)
+    if (!user.password) {
+      // For the first login of existing users, we can set a default password
+      // This is for the existing user in your DB
+      if (email === 'testing@gmail.com') {
+        // Create a hashed password and update the user
+        const hashedPassword = await bcrypt.hash('test', 10);
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { password: hashedPassword },
+        });
+
+        // Generate the JWT token
+        return this.generateToken(user);
+      }
+      throw new UnauthorizedException(
+        'Account setup required. Please contact an administrator.'
+      );
+    }
+
+    // Verify the password
+    const passwordValid = await bcrypt.compare(password, user.password);
+
+    if (!passwordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return this.generateToken(user);
   }
 
-  getUserFromToken(token: string): Promise<User> {
-    const id = this.jwtService.decode(token)['id'];
-    return this.prisma.user.findUnique({ where: { id } });
+  async refreshToken(user: User) {
+    return this.generateToken(user);
   }
 
-  generateTokens(payload: { userId: string }): Token {
+  private generateToken(user: User) {
+    // Use user.id (numeric) as the userId in the token
+    const token = this.jwtService.sign({ userId: user.id });
+
     return {
-      accessToken: this.generateAccessToken(payload),
-      refreshToken: this.generateRefreshToken(payload),
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.fullName,
+      },
     };
   }
 
-  private generateAccessToken(payload: { userId: string }): string {
-    return this.jwtService.sign(payload);
+  // Method to generate a password hash
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, 10);
   }
 
-  private generateRefreshToken(payload: { userId: string }): string {
-    const securityConfig = this.configService.get<SecurityConfig>('security');
-    return this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_REFRESH_SECRET'),
-      expiresIn: securityConfig.refreshIn,
+  async validateUser(uuid: string): Promise<User> {
+    const user = await this.prisma.user.findFirst({
+      where: { userId: uuid },
     });
-  }
 
-  refreshToken(token: string) {
-    try {
-      const { userId } = this.jwtService.verify(token, {
-        secret: this.configService.get('JWT_REFRESH_SECRET'),
-      });
-      return this.generateTokens({
-        userId,
-      });
-    } catch (e) {
-      throw new UnauthorizedException();
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
+
+    return user;
   }
 }

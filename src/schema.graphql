@@ -7,6 +7,11 @@ type AgentQueue {
   tickets: [Ticket!]!
 }
 
+type AuthResponse {
+  token: String!
+  user: UserData!
+}
+
 type Category {
   """Identifies the date and time when the object was created."""
   createdAt: Date!
@@ -100,8 +105,10 @@ type Mutation {
   editUserGroup(id: Int!, mode: String!, name: String!): String!
   flushRedis: String!
   giveFeedback(feedback: String!, rating: Int!, ticketId: Int!): String!
+  login(email: String!, password: String!): AuthResponse!
   readAllNotifications: Boolean!
   readNotification(notificationId: Int!): String!
+  refreshToken: AuthResponse!
   removeFollower(deletingFollowerId: Int!, ticketId: Int!): String!
   removeFromUserGroup(userGroupId: Int!, userId: Int!): String!
   removeKnowledgebase(knowledgebaseId: Int!): String!
@@ -467,12 +474,19 @@ type User {
   fullName: String!
   id: Int!
   isSuperAdmin: Boolean!
+  password: String
   rcno: Int!
   roles: [UserRole!]
 
   """Identifies the date and time when the object was last updated."""
   updatedAt: Date!
   userId: String!
+}
+
+type UserData {
+  email: String!
+  id: String!
+  name: String!
 }
 
 type UserGroup {

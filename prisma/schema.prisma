@@ -36,6 +36,7 @@ model User {
   rcno                 Int
   fullName             String
   email                String
+  password             String? // Added for local authentication
   notifications        Notification[]
   informations         Information[]
   roles                UserRole[]

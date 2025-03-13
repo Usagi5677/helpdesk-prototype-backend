@@ -1,6 +1,8 @@
 import { PrismaService } from 'nestjs-prisma';
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -25,7 +27,8 @@ export class UserService {
   constructor(
     private prisma: PrismaService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly apsService: APSService,
+    //@Inject(forwardRef(() => APSService))
+    //private readonly apsService: APSService, // Properly apply forwardRef to APSService
     private readonly siteService: SiteService
   ) {}
 
@@ -35,6 +38,7 @@ export class UserService {
     userId: string,
     fullName: string,
     email: string,
+    password?: string,
     roles?: RoleEnum[],
     siteId?: number
   ): Promise<User> {
@@ -45,6 +49,7 @@ export class UserService {
         userId,
         fullName,
         email,
+        password,
         roles: { create: roles.map((role) => ({ role, siteId })) },
       },
     });
@@ -183,6 +188,7 @@ export class UserService {
   }
 
   //** Add user to user group. */
+
   async addToUserGroup(userId: string, userGroupId: number) {
     const [user] = await this.createIfNotExists(userId);
     try {
@@ -289,7 +295,7 @@ export class UserService {
         },
       });
     } else {
-      users = await this.apsService.searchAPS(contains);
+      //users = await this.apsService.searchAPS(contains);
     }
 
     const where: any = {
@@ -340,18 +346,12 @@ export class UserService {
 
     // If user doesn't exist on the system, fetch from APS, then create user with roles.
     if (!user) {
-      const profile = await this.apsService.getProfile(userId);
-      if (!profile) {
-        throw new BadRequestException('Invalid user.');
-      }
-      await this.createUser(
-        profile.rcno,
-        profile.userId,
-        profile.fullName,
-        profile.email,
-        roles,
-        siteId
-      );
+      //const profile = await this.apsService.getProfile(userId);
+      //if (!profile) {
+      //  throw new BadRequestException('Invalid user.');
+      //}
+      //profile before
+      await this.createUser(user.rcno, user.userId, user.fullName, user.email);
       return;
     }
 
@@ -371,22 +371,22 @@ export class UserService {
     await this.redisCacheService.del(`userSites-${userId}`);
   }
 
-  async createIfNotExists(userId: string): Promise<[User, Profile]> {
+  async createIfNotExists(userId: string): Promise<[User, User]> {
     let user = await this.prisma.user.findFirst({
       where: { userId },
     });
-    const profile = await this.apsService.getProfile(userId);
-    if (!profile) {
-      throw new BadRequestException('Invalid user.');
-    }
+    //const profile = await this.apsService.getProfile(userId);
+    //if (!profile) {
+    //  throw new BadRequestException('Invalid user.');
+    //}
     if (!user) {
       user = await this.createUser(
-        profile.rcno,
-        profile.userId,
-        profile.fullName,
-        profile.email
+        user.rcno,
+        user.userId,
+        user.fullName,
+        user.email
       );
     }
-    return [user, profile];
+    return [user, user];
   }
 }

@@ -18,6 +18,7 @@ import jwtDecode from 'jwt-decode';
 import { PubsubModule } from './resolvers/pubsub/pubsub.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SiteModule } from './resolvers/site/site.module';
+import { APSModule } from './services/aps.module';
 
 @Module({
   imports: [

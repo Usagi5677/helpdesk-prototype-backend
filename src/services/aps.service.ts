@@ -2,16 +2,23 @@ import { RedisCacheService } from 'src/redisCache.service';
 import { Profile } from 'src/models/profile.model';
 import axios from 'axios';
 import {
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { User } from 'src/models/user.model';
+import { UserService } from './user.service';
 
 @Injectable()
 export class APSService {
   private readonly logger = new Logger(APSService.name);
-  constructor(private readonly redisCacheService: RedisCacheService) {}
+  constructor(
+    @Inject(forwardRef(() => UserService))
+    private readonly userService: UserService,
+    private readonly redisCacheService: RedisCacheService
+  ) {}
 
   /** Get profile from APS and cache for 7 days */
   async getProfile(uuid: string): Promise<Profile> {

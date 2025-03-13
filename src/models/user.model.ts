@@ -8,6 +8,7 @@ export class User extends BaseModel {
   fullName: string;
   userId: string;
   email: string;
+  password?: string;
   roles?: UserRole[];
   isSuperAdmin: boolean;
 }

@@ -9,7 +9,7 @@ import { SiteModule } from './resolvers/site/site.module';
 @Module({
   imports: [
     forwardRef(() => UserModule),
-    forwardRef(() => APSModule),
+    //forwardRef(() => APSModule),
     forwardRef(() => SiteModule),
   ],
   providers: [RedisCacheService, RedisCacheResolver, UserService],

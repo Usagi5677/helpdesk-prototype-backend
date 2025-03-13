@@ -11,7 +11,7 @@ import { SiteModule } from '../site/site.module';
 @Module({
   imports: [
     forwardRef(() => RedisCacheModule),
-    forwardRef(() => APSModule),
+    //forwardRef(() => APSModule),
     SiteModule,
   ],
   providers: [

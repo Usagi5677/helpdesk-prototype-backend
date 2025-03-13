@@ -26,6 +26,7 @@ Table User {
   rcno Int [not null]
   fullName String [not null]
   email String [not null]
+  password String
   notifications Notification [not null]
   informations Information [not null]
   roles UserRole [not null]
