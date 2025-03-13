@@ -57,11 +57,40 @@ import { APSModule } from './services/aps.module';
     PrismaModule.forRoot({
       isGlobal: true,
     }),
-    BullModule.forRoot({
-      redis: {
-        host: 'localhost',
-        port: 6379,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        // If REDIS_URL is provided (on Render)
+        if (process.env.REDIS_URL) {
+          try {
+            // Parse the URL
+            const url = new URL(process.env.REDIS_URL);
+
+            return {
+              redis: {
+                host: url.hostname,
+                port: parseInt(url.port, 10) || 6379,
+                // Add password if it exists in the URL
+                ...(url.password ? { password: url.password } : {}),
+              },
+            };
+          } catch (error) {
+            console.error(
+              'Failed to parse REDIS_URL, falling back to localhost:',
+              error
+            );
+          }
+        }
+
+        // Default/fallback to localhost
+        return {
+          redis: {
+            host: 'localhost',
+            port: 6379,
+          },
+        };
       },
+      inject: [ConfigService],
     }),
     PubsubModule,
     AuthModule,
