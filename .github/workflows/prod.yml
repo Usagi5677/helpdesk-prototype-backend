@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
+      
       # Add step to check environment
       - name: Check environment
         run: |
@@ -16,28 +16,30 @@ jobs:
           echo "NPM version: $(npm -v)"
           echo "Ubuntu version: $(lsb_release -a)"
           echo "OpenSSL version: $(openssl version)"
-
+      
       - name: Update Browserslist Database
         run: npx browserslist@latest --update-db
-
+        
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
-          cache: 'npm'
-
-      # Add explicit Prisma setup
+          node-version: "16"
+          cache: "npm"
+      
+      # Install Prisma v3 to match the requirements of @devoxa/prisma-relay-cursor-connection
       - name: Setup Prisma
         run: |
-          npm install prisma@4.16.2 @prisma/client@4.16.2 --save-dev
+          npm install prisma@3.15.2 @prisma/client@3.15.2 --save-dev --legacy-peer-deps
           npx prisma -v
           
+      # Use --legacy-peer-deps for all npm commands
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
       
-      # Run prisma generate separately with verbose logging
+      # Generate Prisma client with additional binary targets
       - name: Generate Prisma client
-        run: npx prisma generate --verbose
+        run: |
+          npx prisma generate --schema=./prisma/schema.prisma --verbose
         
       - name: Run ESLint
         run: npm run lint
