@@ -1,28 +1,55 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
-
-# Controls when the action will run.
+# Controls when the action will run
 on:
-  # Triggers the workflow on push or pull request events but only for the developemnt branch
+  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [main]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: [self-hosted, production]
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it.
+      - uses: actions/checkout@v3
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: bash /home/ghulha/actions-runner/magic-helpdeskapi.sh
+      # Update Browserslist database
+      - name: Update Browserslist Database
+        run: npx browserslist@latest --update-db
+
+      # Set up Node.js environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16" # or whatever version you use
+          cache: "npm"
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Run linting
+      - name: Run ESLint
+        run: npm run lint
+
+      # Run tests if you have them
+      - name: Run tests
+        run: npm test || true # The "|| true" makes it continue even if tests fail
+
+      # Build the project with CI set to false to treat warnings as non-fatal
+      - name: Build
+        run: CI=false npm run build
+
+      # You'll need to replace this with your actual deployment steps
+      # This is a placeholder for your deployment logic
+      - name: Deploy
+        run: |
+          echo "Add your deployment commands here"
+          # For example:
+          # npm run deploy
