@@ -48,12 +48,12 @@ Key contributions:
 ```sh
 git clone https://github.com/Usagi5677/helpdesk-prototype-backend.git
 cd helpdesk-prototype-backend
-
+```
 
 ### **2️⃣ Install Dependencies**
-
+```sh
 npm install
-
+```
 
 ### **3️⃣ Set Up Environment Variables**
 
@@ -62,17 +62,17 @@ Create a .env file in the root directory with the following variables:
 DATABASE_URL=postgresql://user:password@localhost:5432/helpdesk
 REDIS_URL=redis://localhost:6379
 PORT=4000
-
+```
 Replace user and password with your PostgreSQL credentials.
 
 ### **4️⃣ Apply Database Migrations**
 ```sh
 npx prisma migrate deploy
-
+```
 ### **5️⃣ Start the Development Server**
 ```sh
 npm run start:dev
-
+```
 The server will run at http://localhost:4000.
 
 
