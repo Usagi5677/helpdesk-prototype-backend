@@ -15,7 +15,7 @@ export class User extends BaseModel {
   fullName: string;
   userId: string;
   email: string;
-  password?: string;
+  password: string | null;
   roles?: UserRole[];
   userGroupUsers?: UserGroup[];
   ticketsCreated?: Ticket[];

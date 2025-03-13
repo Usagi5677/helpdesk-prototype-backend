@@ -496,7 +496,7 @@ type User {
   fullName: String!
   id: Int!
   isSuperAdmin: Boolean!
-  password: String
+  password: String!
   rcno: Int!
   roles: [UserRole!]
   ticketAssignments: [TicketAssignment!]
