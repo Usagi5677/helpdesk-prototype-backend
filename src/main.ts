@@ -21,7 +21,15 @@ async function bootstrap() {
 
   // Cors
   if (corsConfig.enabled) {
-    app.enableCors();
+    app.enableCors({
+      origin: [
+        'https://helpdesk-prototype-frontend.onrender.com',
+        'http://localhost:3002', // For local frontend development
+      ],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      credentials: true,
+      allowedHeaders: ['Authorization', 'Content-Type', 'Accept'],
+    });
   }
 
   await app.listen(process.env.PORT || nestConfig.port || 4000);
