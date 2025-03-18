@@ -19,6 +19,7 @@ import { PubsubModule } from './resolvers/pubsub/pubsub.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SiteModule } from './resolvers/site/site.module';
 import { APSModule } from './services/aps.module';
+import { isRenderEnvironment } from './common/helpers/env.util';
 
 @Module({
   imports: [
@@ -60,12 +61,11 @@ import { APSModule } from './services/aps.module';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const redisUrl = process.env.REDIS_URL;
-        const isRender = redisUrl && redisUrl.includes('red-cv9crr');
+        const isOnRender = isRenderEnvironment();
 
-        if (isRender) {
+        if (isOnRender && process.env.REDIS_URL) {
           try {
-            const url = new URL(redisUrl);
+            const url = new URL(process.env.REDIS_URL);
             console.log(`Using Render Redis for Bull at: ${url.hostname}`);
 
             return {
@@ -79,6 +79,7 @@ import { APSModule } from './services/aps.module';
           }
         }
 
+        // Local development fallback
         console.log('Using local Redis for Bull');
         return {
           redis: {

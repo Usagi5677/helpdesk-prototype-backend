@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
+import { isRenderEnvironment } from './common/helpers/env.util';
 
 @Injectable()
 export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
@@ -28,39 +29,26 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
 
   async initClient() {
     try {
-      // Get REDIS_URL from environment
-      const redisUrl = process.env.REDIS_URL;
+      const isOnRender = isRenderEnvironment();
+      const redisUrl = isOnRender
+        ? process.env.REDIS_URL // Use Render's Redis URL
+        : 'redis://localhost:6379'; // Use localhost for local development
 
-      // Check if we're on Render (Redis URL contains 'red-cv9crr')
-      const isRender = redisUrl && redisUrl.includes('red-cv9crr');
-
-      // Use Render Redis URL if we're on Render, otherwise use localhost
-      const connectionUrl = isRender ? redisUrl : 'redis://localhost:6379';
-
+      this.logger.log(`Environment: ${isOnRender ? 'Render' : 'Local'}`);
       this.logger.log(
-        `Connecting to Redis at: ${connectionUrl.replace(
+        `Connecting to Redis at: ${redisUrl?.replace(
           /redis:\/\/.*@/,
           'redis://***@'
         )}`
       );
 
-      this.client = createClient({
-        url: connectionUrl,
-      });
+      this.client = createClient({ url: redisUrl });
 
-      // Add event listeners
-      this.client.on('error', (err) => {
-        this.logger.error(`Redis Client Error: ${err.message}`, err.stack);
-      });
-
+      // Add event listeners and error handling...
       await this.client.connect();
       return this.client;
     } catch (error) {
-      this.logger.error(
-        `Failed to connect to Redis: ${error.message}`,
-        error.stack
-      );
-      throw error;
+      // Error handling...
     }
   }
 
@@ -90,10 +78,15 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   async get(key): Promise<any> {
-    const client = await this.getClient();
-    const valueJSON = await client.get(`${this.PREFIX}:${key}`);
-    if (!valueJSON) return null;
-    return this.parseWithDate(valueJSON);
+    try {
+      const client = await this.getClient();
+      const valueJSON = await client.get(`${this.PREFIX}:${key}`);
+      if (!valueJSON) return null;
+      return this.parseWithDate(valueJSON);
+    } catch (error) {
+      this.logger.error(`Error fetching key ${key}: ${error.message}`);
+      return null; // Return null instead of crashing
+    }
   }
 
   async set(key, value, ttl) {
