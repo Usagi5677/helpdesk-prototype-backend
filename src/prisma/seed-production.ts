@@ -27,6 +27,7 @@ async function main() {
       password: hashedPassword,
       fullName: 'Admin User',
       rcno: 1111,
+      isSuperAdmin: true,
     },
   });
 
