@@ -61,30 +61,34 @@ import { isRenderEnvironment } from './common/helpers/env.util';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const isOnRender = isRenderEnvironment();
+        // Get Redis connection details from environment variables
+        const redisUrl = process.env.REDIS_URL;
+        console.log(`Redis URL for Bull: ${redisUrl}`);
 
-        if (isOnRender && process.env.REDIS_URL) {
+        // Default values
+        let host = 'localhost';
+        let port = 6379;
+
+        // Parse Redis URL if it's available and not localhost
+        if (redisUrl && redisUrl !== 'redis://localhost:6379') {
           try {
-            const url = new URL(process.env.REDIS_URL);
-            console.log(`Using Render Redis for Bull at: ${url.hostname}`);
-
-            return {
-              redis: {
-                host: url.hostname,
-                port: parseInt(url.port, 10) || 6379,
-              },
-            };
-          } catch (error) {
-            console.error('Failed to parse Redis URL:', error);
+            const match = redisUrl.match(/redis:\/\/([^:]+):(\d+)/);
+            if (match) {
+              host = match[1];
+              port = parseInt(match[2], 10);
+            }
+          } catch (err) {
+            console.error(`Failed to parse Redis URL for Bull: ${err.message}`);
           }
         }
 
-        // Local development fallback
-        console.log('Using local Redis for Bull');
+        console.log(`Connecting Bull to Redis at host: ${host}, port: ${port}`);
+
+        // Return explicit host and port configuration
         return {
           redis: {
-            host: 'localhost',
-            port: 6379,
+            host,
+            port,
           },
         };
       },
