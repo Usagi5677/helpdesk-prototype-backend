@@ -60,29 +60,26 @@ import { APSModule } from './services/aps.module';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        // If REDIS_URL is provided (on Render)
-        if (process.env.REDIS_URL) {
+        const redisUrl = process.env.REDIS_URL;
+        const isRender = redisUrl && redisUrl.includes('red-cv9crr');
+
+        if (isRender) {
           try {
-            // Parse the URL
-            const url = new URL(process.env.REDIS_URL);
+            const url = new URL(redisUrl);
+            console.log(`Using Render Redis for Bull at: ${url.hostname}`);
 
             return {
               redis: {
                 host: url.hostname,
                 port: parseInt(url.port, 10) || 6379,
-                // Add password if it exists in the URL
-                ...(url.password ? { password: url.password } : {}),
               },
             };
           } catch (error) {
-            console.error(
-              'Failed to parse REDIS_URL, falling back to localhost:',
-              error
-            );
+            console.error('Failed to parse Redis URL:', error);
           }
         }
 
-        // Default/fallback to localhost
+        console.log('Using local Redis for Bull');
         return {
           redis: {
             host: 'localhost',

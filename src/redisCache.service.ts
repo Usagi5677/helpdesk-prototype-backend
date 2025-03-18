@@ -26,35 +26,35 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async initClient() {
+  async initClient() {
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+      // Get REDIS_URL from environment
+      const redisUrl = process.env.REDIS_URL;
+
+      // Check if we're on Render (Redis URL contains 'red-cv9crr')
+      const isRender = redisUrl && redisUrl.includes('red-cv9crr');
+
+      // Use Render Redis URL if we're on Render, otherwise use localhost
+      const connectionUrl = isRender ? redisUrl : 'redis://localhost:6379';
+
       this.logger.log(
-        `Connecting to Redis: ${redisUrl.replace(
+        `Connecting to Redis at: ${connectionUrl.replace(
           /redis:\/\/.*@/,
           'redis://***@'
         )}`
       );
 
       this.client = createClient({
-        url: redisUrl,
-        socket: {
-          reconnectStrategy: (retries) => {
-            this.logger.warn(`Redis connection retry attempt ${retries}`);
-            return Math.min(retries * 100, 3000); // Increasing backoff up to 3 seconds
-          },
-        },
+        url: connectionUrl,
       });
 
-      this.client.on('error', (err) =>
-        this.logger.error('Redis Client Error', err)
-      );
-      this.client.on('connect', () => this.logger.log('Connected to Redis'));
-      this.client.on('reconnecting', () =>
-        this.logger.log('Reconnecting to Redis')
-      );
+      // Add event listeners
+      this.client.on('error', (err) => {
+        this.logger.error(`Redis Client Error: ${err.message}`, err.stack);
+      });
 
       await this.client.connect();
+      return this.client;
     } catch (error) {
       this.logger.error(
         `Failed to connect to Redis: ${error.message}`,
