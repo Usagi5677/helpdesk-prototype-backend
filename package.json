@@ -48,7 +48,8 @@
     "docker:seed": "docker exec -it nest-api npm run seed",
     "docker": "docker-compose up -d",
     "docker:build": "docker-compose build",
-    "render-build": "npx prisma generate && nest build"
+    "render-build": "npm run render-prebuild && npx prisma generate && nest build",
+    "render-prebuild": "npm install prisma@3.15.2 @prisma/client@3.15.2 --no-save && npx prisma generate"
   },
   "dependencies": {
     "@devoxa/prisma-relay-cursor-connection": "2.0.3",
@@ -114,7 +115,7 @@
     "ts-loader": "9.2.6",
     "ts-node": "10.2.1",
     "tsconfig-paths": "3.10.1",
-    "typescript": "^5.1.6"
+    "typescript": "^4.3.5"
   },
   "jest": {
     "moduleFileExtensions": [
