@@ -21,7 +21,10 @@ async function bootstrap() {
 
   // Cors
   if (corsConfig.enabled) {
-    app.enableCors();
+    app.enableCors({
+      origin: true, // Allow all origins temporarily for debugging
+      credentials: true,
+    });
   }
 
   await app.listen(process.env.PORT || nestConfig.port || 4000);
